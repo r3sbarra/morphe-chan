@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 from code_shape.art import get_badge_base64, ASCII_MASCOT, render_mermaid_diagram
 from code_shape.reports.builder import AnalysisReport
+from code_shape.reports import shape3d
 
 # Path to vendored Chart.js, resolved relative to this file.
 _CHART_JS = Path(__file__).resolve().parents[3] / "static" / "vendor" / "chart.umd.min.js"
@@ -189,6 +190,39 @@ def render_html(rep: AnalysisReport) -> str:
   .note {{ color:var(--muted); font-size:13px; }}
   footer {{ margin-top:40px; color:var(--muted); font-size:13px; text-align:center; padding-top:20px; border-top:1px solid #2a3350; }}
   .footer-mascot {{ display:inline-flex; align-items:center; gap:8px; justify-content:center; }}
+
+  /* ── 3D neural shape stage ── */
+  .shape-stage {{ position:relative; width:100%; height:680px; background:radial-gradient(ellipse at center, #0a0e1a 0%, #05070d 70%); border:1px solid #2a3350; border-radius:10px; overflow:hidden; box-shadow:inset 0 0 80px rgba(88,166,255,.05), 0 8px 40px rgba(0,0,0,.5); }}
+  #shape3d {{ width:100%; height:100%; display:block; cursor:grab; }}
+  #shape3d:active {{ cursor:grabbing; }}
+  .shape-overlay {{ position:absolute; top:14px; left:14px; z-index:5; display:flex; flex-direction:column; gap:10px; }}
+  .shape-overlay select, .shape-overlay .chip {{ padding:8px 14px; border-radius:8px; border:1px solid #2a3350; background:rgba(10,14,26,.85); color:var(--text); font-size:13px; backdrop-filter:blur(4px); }}
+  .shape-overlay .chip {{ display:inline-block; font-family:ui-monospace,monospace; font-size:12px; color:var(--muted); }}
+  .shape-overlay .controls {{ display:flex; gap:8px; flex-wrap:wrap; }}
+  .shape-overlay .toggle {{ padding:7px 12px; border-radius:8px; border:1px solid #2a3350; cursor:pointer; background:rgba(10,14,26,.85); color:var(--muted); font-size:12px; backdrop-filter:blur(4px); transition:all .15s; }}
+  .shape-overlay .toggle:hover {{ color:var(--text); border-color:var(--accent); box-shadow:0 0 12px rgba(168,85,247,.3); }}
+  .shape-overlay .toggle.on {{ color:var(--accent); border-color:var(--accent); background:rgba(168,85,247,.15); box-shadow:0 0 12px rgba(168,85,247,.4); }}
+  .shape-hud {{ position:absolute; bottom:14px; left:14px; z-index:5; font-size:12px; color:var(--muted); background:rgba(10,14,26,.7); padding:6px 12px; border-radius:8px; }}
+  .shape-hud b {{ color:var(--accent); }}
+  .shape-legend {{ position:absolute; bottom:14px; right:14px; z-index:5; display:flex; flex-direction:column; gap:5px; font-size:11px; color:var(--muted); background:rgba(10,14,26,.7); padding:8px 12px; border-radius:8px; max-height:60%; overflow-y:auto; }}
+  .shape-legend .row {{ display:flex; align-items:center; gap:6px; }}
+  .shape-legend .dot {{ width:10px; height:10px; border-radius:50%; box-shadow:0 0 6px currentColor; }}
+  .shape-legend .lbl {{ font-family:ui-monospace,monospace; }}
+  .shape-legend .layer {{ color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }}
+  .detail-panel {{ position:absolute; top:14px; right:14px; z-index:8; width:300px; max-height:80%; overflow-y:auto; background:rgba(11,14,20,.94); border:1px solid var(--accent); border-radius:12px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,.6); display:none; backdrop-filter:blur(6px); }}
+  .detail-panel h3 {{ margin:0 0 4px; font-size:15px; color:var(--accent); font-family:ui-monospace,monospace; }}
+  .detail-panel .cat {{ font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:10px; }}
+  .detail-panel .row {{ display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #2a3350; font-size:13px; }}
+  .detail-panel .row .k {{ color:var(--muted); }}
+  .detail-panel .row .v {{ color:var(--text); font-family:ui-monospace,monospace; }}
+  .detail-panel .desc {{ font-size:12px; color:var(--muted); line-height:1.5; margin:10px 0; }}
+  .detail-panel .files {{ margin-top:8px; }}
+  .detail-panel .files .ft {{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }}
+  .detail-panel .files .f {{ font-family:ui-monospace,monospace; font-size:11px; color:var(--text); padding:3px 0; border-bottom:1px solid #2a3350; }}
+  .detail-panel .close {{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; }}
+  .detail-panel .close:hover {{ color:var(--text); }}
+  .detail-panel .zoom-btn {{ margin-top:12px; width:100%; padding:8px; border-radius:8px; border:1px solid var(--accent); background:rgba(168,85,247,.15); color:var(--accent); cursor:pointer; font-size:13px; }}
+  .detail-panel .zoom-btn:hover {{ background:rgba(168,85,247,.3); }}
 </style>
 </head>
 <body>
@@ -357,6 +391,14 @@ def render_html(rep: AnalysisReport) -> str:
                 parts.append(_bar_chart(cid, labels, values, f"{prefix} dimensions"))
         parts.append("</div>")
 
+    # ── 3D Neural Shape (same graph as morphe-chan_web) ───────────────────
+    s3d = rep.extra.get("shape3d")
+    if s3d:
+        try:
+            parts.append(shape3d.shape3d_html(s3d))
+        except Exception:
+            pass
+
     # ── Imports ───────────────────────────────────────────────────────────
     if rep.imports:
         parts.append("<h2>Imports / Dependencies</h2>")
@@ -523,6 +565,7 @@ def render_html(rep: AnalysisReport) -> str:
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>if (window.mermaid) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); }}</script>
+<script>{shape3d.three_js_inline()}</script>
 <script>{_chart_js_inline()}</script>
 </body>
 </html>

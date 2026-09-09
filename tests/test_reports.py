@@ -77,3 +77,46 @@ def test_reports_include_art_and_mmd():
     assert "data:image/png;base64," in html
     assert "mermaid" in html
     assert "Morphē-chan" in html
+
+
+def test_shape3d_data_builds_payload(tmp_path):
+    """Project scan produces the 3D-graph payload (files, merged graph, contrib)."""
+    from code_shape.reports.shape3d import build_shape3d_data
+    # a tiny project with two python files that call each other
+    (tmp_path / "a.py").write_text("def helper(x):\n    return x + 1\n")
+    (tmp_path / "b.py").write_text("from a import helper\ndef main():\n    return helper(2)\n")
+    data = build_shape3d_data(str(tmp_path))
+    assert data["file_count"] == 2
+    assert data["files"][0]["path"] == "__project__"
+    assert data["merged_graph"] is not None
+    assert "helper" in data["merged_graph"]["functions"]
+    assert data["contrib"]  # non-empty
+    assert data["composite"]
+
+
+def test_shape3d_html_embeds_renderer():
+    """shape3d_html emits the stage + Three.js renderer + DATA payload."""
+    from code_shape.reports.shape3d import build_shape3d_data, shape3d_html, SHAPE3D_JS
+    import tempfile, pathlib
+    with tempfile.TemporaryDirectory() as d:
+        pathlib.Path(d, "x.py").write_text("def f():\n    return 1\n")
+        data = build_shape3d_data(d)
+    html = shape3d_html(data)
+    assert "shape-stage" in html
+    assert 'id="shape3d"' in html
+    assert "const DATA = {" in html
+    assert "initShape3D" in html
+    assert "THREE.WebGLRenderer" in SHAPE3D_JS
+
+
+def test_project_report_includes_3d_graph(tmp_path, monkeypatch):
+    """A project report embeds the 3D neural-shape graph section."""
+    import code_shape.reports.builder as builder
+    monkeypatch.setattr(builder, "REPORT_ROOT", tmp_path)
+    (tmp_path / "proj").mkdir()
+    (tmp_path / "proj" / "m.py").write_text("def f():\n    return 1\n")
+    rep = build_report("project", "proj", project_dir=str(tmp_path / "proj"))
+    html = render_html(rep)
+    assert "3D Neural Shape" in html
+    assert 'id="shape3d"' in html
+    assert "THREE.WebGLRenderer" in html  # Three.js vendored inline

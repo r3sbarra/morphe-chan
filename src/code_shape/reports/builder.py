@@ -180,6 +180,12 @@ def collect_analysis(
             rep.imports = analyze_imports(root)
         except Exception:
             rep.imports = {}
+        # 3D neural-shape graph data (per-file dataflow + merged graph + contrib)
+        try:
+            from code_shape.reports.shape3d import build_shape3d_data
+            rep.extra["shape3d"] = build_shape3d_data(str(root))
+        except Exception:
+            rep.extra["shape3d"] = None
         # derive counts from composite vector
         rep.file_count = int(rep.composite.get("FUNC", 0))  # placeholder; refined below
         rep.function_count = int(rep.composite.get("FUNC", 0))
