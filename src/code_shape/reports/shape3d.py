@@ -23,9 +23,6 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Path to vendored Three.js, resolved relative to this file.
-_THREE_JS = Path(__file__).resolve().parents[3] / "static" / "vendor" / "three.min.js"
-
 # Same language/extension map + skip dirs as composite_vector.py (kept in sync).
 EXT = {
     "python": [".py"], "javascript": [".js", ".mjs", ".cjs"],
@@ -175,9 +172,7 @@ def build_shape3d_data(project_dir: str, max_files: int = 500) -> Dict[str, Any]
 
 
 def three_js_inline() -> str:
-    """Return the vendored Three.js source (or a CDN fallback if missing)."""
-    if _THREE_JS.exists():
-        return _THREE_JS.read_text(encoding="utf-8")
+    """Return a CDN <script> tag for Three.js (keeps reports lean)."""
     return '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'
 
 

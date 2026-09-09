@@ -119,4 +119,7 @@ def test_project_report_includes_3d_graph(tmp_path, monkeypatch):
     html = render_html(rep)
     assert "3D Neural Shape" in html
     assert 'id="shape3d"' in html
-    assert "THREE.WebGLRenderer" in html  # Three.js vendored inline
+    assert "THREE.WebGLRenderer" in html  # renderer JS present
+    # Three.js is loaded from CDN (keeps reports lean), not inlined
+    assert "cdnjs.cloudflare.com/ajax/libs/three.js" in html
+    assert "THREE.WebGLRenderer" in html

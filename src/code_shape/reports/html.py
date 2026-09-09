@@ -565,7 +565,7 @@ def render_html(rep: AnalysisReport) -> str:
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>if (window.mermaid) {{ mermaid.initialize({{ startOnLoad: true, theme: 'dark' }}); }}</script>
-<script>{shape3d.three_js_inline()}</script>
+{shape3d.three_js_inline()}
 <script>{_chart_js_inline()}</script>
 </body>
 </html>
