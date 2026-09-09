@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "morphe-chan"
+version = "0.1.0"
+description = "Multi-dimensional geometric code analysis and synthesis: represent code as vectors with properties and compositing compound shapes."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Ai", email = "ai@openclaw.local" }]
+keywords = ["code-analysis", "code-synthesis", "shape", "vector", "static-analysis", "vulnerability-detection"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://github.com/richard/morphe-chan"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = [
+    "code_shape",
+    "code_shape.adapters",
+    "code_shape.core",
+    "code_shape.analysis",
+    "code_shape.security",
+    "code_shape.synthesis",
+    "code_shape.reports",
+]
+
+[tool.setuptools.package-data]
+"code_shape" = ["../data/libraries/**/*.json"]
+
+[project.scripts]
+morphe-chan = "code_shape.cli:main"

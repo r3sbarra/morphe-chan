@@ -1,0 +1,154 @@
+{
+  "language": "csharp",
+  "version": "1.0",
+  "libraries": {
+    "System.Data.SqlClient": {
+      "SqlCommand": "SQL",
+      "ExecuteReader": "SQL",
+      "ExecuteNonQuery": "SQL"
+    },
+    "System.IO": {
+      "File": "FILE",
+      "StreamReader": "FILE",
+      "StreamWriter": "FILE",
+      "Directory": "FILE"
+    },
+    "System.Diagnostics": {
+      "Process": "EXEC"
+    },
+    "System.Net": {
+      "HttpClient": "NETWORK",
+      "WebRequest": "NETWORK"
+    },
+    "System.Security.Cryptography": {
+      "SHA256": "CRYPTO_SAFE",
+      "MD5": "CRYPTO_WEAK",
+      "Aes": "CRYPTO_SAFE"
+    },
+    "System.Xml": {
+      "XmlDocument": "XXE"
+    },
+    "Microsoft.AspNetCore": {
+      "HttpRequest": "WEB_INPUT",
+      "HttpResponse": "RENDER",
+      "Redirect": "REDIRECT"
+    },
+    "System.Net.Http": {
+      "HttpClient": "NETWORK",
+      "GetAsync": "NETWORK",
+      "PostAsync": "NETWORK"
+    },
+    "System.Text.Json": {
+      "JsonSerializer": "SAFE"
+    },
+    "Newtonsoft.Json": {
+      "JsonConvert": "SAFE"
+    },
+    "HtmlAgilityPack": {
+      "HtmlDocument": "SCRAPE"
+    },
+    "Selenium": {
+      "WebDriver": "SCRAPE"
+    },
+    "Microsoft.EntityFrameworkCore": {
+      "DbSet": "SQL",
+      "FromSqlRaw": "SQL"
+    },
+    "StackExchange.Redis": {
+      "ConnectionMultiplexer": "NETWORK"
+    },
+    "MongoDB.Driver": {
+      "IMongoCollection": "SQL"
+    },
+    "Serilog": {
+      "Log": "LOG"
+    },
+    "NLog": {
+      "LogManager": "LOG"
+    }
+  },
+  "stdlib": {
+    "System": {
+      "Console": "SAFE",
+      "Environment": "WEB_INPUT"
+    },
+    "System.IO": {
+      "File": "FILE",
+      "StreamReader": "FILE",
+      "StreamWriter": "FILE",
+      "Directory": "FILE",
+      "Path": "FILE"
+    },
+    "System.Net": {
+      "HttpClient": "NETWORK",
+      "WebRequest": "NETWORK",
+      "WebClient": "NETWORK"
+    },
+    "System.Net.Sockets": {
+      "TcpClient": "NETWORK",
+      "Socket": "NETWORK"
+    },
+    "System.Data": {
+      "SqlConnection": "SQL",
+      "SqlCommand": "SQL",
+      "DataTable": "SQL"
+    },
+    "System.Data.SqlClient": {
+      "SqlCommand": "SQL",
+      "ExecuteReader": "SQL",
+      "ExecuteNonQuery": "SQL"
+    },
+    "System.Diagnostics": {
+      "Process": "EXEC",
+      "ProcessStartInfo": "EXEC"
+    },
+    "System.Security.Cryptography": {
+      "SHA256": "CRYPTO_SAFE",
+      "MD5": "CRYPTO_WEAK",
+      "Aes": "CRYPTO_SAFE",
+      "RNGCryptoServiceProvider": "CRYPTO_SAFE"
+    },
+    "System.Text": {
+      "Encoding": "SAFE",
+      "StringBuilder": "SAFE"
+    },
+    "System.Text.Json": {
+      "JsonSerializer": "SAFE"
+    },
+    "System.Xml": {
+      "XmlDocument": "XXE",
+      "XmlReader": "XXE"
+    },
+    "System.Runtime.Serialization": {
+      "DataContractSerializer": "DESERIALIZE"
+    },
+    "System.Web": {
+      "HttpRequest": "WEB_INPUT",
+      "HttpResponse": "RENDER"
+    },
+    "System.Threading": {
+      "Thread": "EXEC",
+      "Task": "EXEC"
+    },
+    "System.Collections.Generic": {
+      "List": "SAFE",
+      "Dictionary": "SAFE"
+    },
+    "System.Linq": {
+      "Where": "SAFE",
+      "Select": "SAFE"
+    },
+    "System.Text.RegularExpressions": {
+      "Regex": "SAFE"
+    },
+    "Microsoft.Extensions.Logging": {
+      "ILogger": "LOG"
+    },
+    "System.IO.Compression": {
+      "ZipArchive": "FILE"
+    },
+    "System.Net.Http": {
+      "HttpClient": "NETWORK"
+    }
+  }
+}

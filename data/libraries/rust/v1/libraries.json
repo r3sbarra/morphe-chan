@@ -1,0 +1,149 @@
+{
+  "language": "rust",
+  "version": "1.0",
+  "libraries": {
+    "std::process": {
+      "Command": "EXEC"
+    },
+    "std::fs": {
+      "read_to_string": "FILE",
+      "write": "FILE",
+      "File": "FILE"
+    },
+    "std::net": {
+      "TcpStream": "NETWORK"
+    },
+    "reqwest": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "serde_json": {
+      "from_str": "SAFE",
+      "to_string": "SAFE"
+    },
+    "rusqlite": {
+      "execute": "SQL",
+      "query": "SQL"
+    },
+    "rand": {
+      "random": "CRYPTO_WEAK"
+    },
+    "tokio": {
+      "spawn": "EXEC"
+    },
+    "actix_web": {
+      "web": "WEB_INPUT",
+      "HttpRequest": "WEB_INPUT"
+    },
+    "axum": {
+      "Router": "WEB_INPUT"
+    },
+    "sqlx": {
+      "query": "SQL",
+      "execute": "SQL"
+    },
+    "diesel": {
+      "Queryable": "SQL",
+      "insert_into": "SQL"
+    },
+    "serde": {
+      "Deserialize": "SAFE",
+      "Serialize": "SAFE"
+    },
+    "scraper": {
+      "Html": "SCRAPE",
+      "Selector": "SCRAPE"
+    },
+    "select": {
+      "document": "SCRAPE"
+    },
+    "ureq": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "hyper": {
+      "Client": "NETWORK"
+    },
+    "openssl": {
+      "hash": "CRYPTO_SAFE"
+    },
+    "sha2": {
+      "Sha256": "CRYPTO_SAFE"
+    },
+    "chrono": {
+      "Utc": "SAFE"
+    },
+    "log": {
+      "info": "LOG",
+      "error": "LOG"
+    }
+  },
+  "stdlib": {
+    "std::process": {
+      "Command": "EXEC"
+    },
+    "std::fs": {
+      "read_to_string": "FILE",
+      "write": "FILE",
+      "File": "FILE",
+      "remove_file": "FILE"
+    },
+    "std::net": {
+      "TcpStream": "NETWORK",
+      "TcpListener": "NETWORK"
+    },
+    "std::env": {
+      "var": "WEB_INPUT",
+      "args": "WEB_INPUT"
+    },
+    "std::io": {
+      "Read": "FILE",
+      "Write": "FILE"
+    },
+    "std::path": {
+      "Path": "FILE"
+    },
+    "std::collections": {
+      "HashMap": "SAFE"
+    },
+    "std::time": {
+      "SystemTime": "SAFE"
+    },
+    "std::thread": {
+      "spawn": "EXEC"
+    },
+    "std::sync": {
+      "Mutex": "SAFE"
+    },
+    "std::string": {
+      "String": "SAFE"
+    },
+    "std::vec": {
+      "Vec": "SAFE"
+    },
+    "std::error": {
+      "Error": "SAFE"
+    },
+    "std::fmt": {
+      "format": "SAFE"
+    },
+    "std::str": {
+      "parse": "SAFE"
+    },
+    "std::char": {
+      "from_u32": "SAFE"
+    },
+    "std::cmp": {
+      "max": "SAFE"
+    },
+    "std::iter": {
+      "Iterator": "SAFE"
+    },
+    "std::option": {
+      "Option": "SAFE"
+    },
+    "std::result": {
+      "Result": "SAFE"
+    }
+  }
+}

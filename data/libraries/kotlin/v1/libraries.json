@@ -1,0 +1,127 @@
+{
+  "language": "kotlin",
+  "version": "1.0",
+  "libraries": {
+    "java.sql": {
+      "Statement.execute": "SQL",
+      "PreparedStatement": "SQL_SAFE"
+    },
+    "java.io": {
+      "File": "FILE"
+    },
+    "java.lang": {
+      "Runtime.exec": "EXEC",
+      "ProcessBuilder": "EXEC"
+    },
+    "okhttp3": {
+      "OkHttpClient": "NETWORK",
+      "Request": "NETWORK"
+    },
+    "kotlinx.serialization": {
+      "Json": "SAFE"
+    },
+    "org.springframework": {
+      "RestController": "WEB_INPUT",
+      "GetMapping": "WEB_INPUT"
+    },
+    "com.squareup.okhttp3": {
+      "OkHttpClient": "NETWORK",
+      "Request": "NETWORK"
+    },
+    "org.jetbrains.exposed": {
+      "Table": "SQL",
+      "selectAll": "SQL",
+      "insert": "SQL"
+    },
+    "org.jetbrains.kotlinx": {
+      "Json": "SAFE"
+    },
+    "java.nio.file": {
+      "Files": "FILE"
+    },
+    "kotlin.io": {
+      "readText": "FILE",
+      "writeText": "FILE"
+    },
+    "org.jsoup": {
+      "Jsoup": "SCRAPE"
+    },
+    "java.security": {
+      "MessageDigest": "CRYPTO_SAFE"
+    },
+    "java.util": {
+      "Random": "CRYPTO_WEAK"
+    }
+  },
+  "stdlib": {
+    "kotlin.io": {
+      "readText": "FILE",
+      "writeText": "FILE",
+      "readLines": "FILE"
+    },
+    "java.io": {
+      "File": "FILE",
+      "FileInputStream": "FILE",
+      "FileOutputStream": "FILE"
+    },
+    "java.nio.file": {
+      "Files": "FILE",
+      "Paths": "FILE"
+    },
+    "java.lang": {
+      "Runtime.exec": "EXEC",
+      "ProcessBuilder": "EXEC",
+      "System.getenv": "WEB_INPUT"
+    },
+    "java.net": {
+      "URL": "NETWORK",
+      "HttpURLConnection": "NETWORK",
+      "Socket": "NETWORK"
+    },
+    "java.sql": {
+      "Statement.execute": "SQL",
+      "PreparedStatement": "SQL_SAFE",
+      "DriverManager": "SQL"
+    },
+    "java.util": {
+      "Random": "CRYPTO_WEAK",
+      "Scanner": "WEB_INPUT"
+    },
+    "java.security": {
+      "MessageDigest": "CRYPTO_SAFE",
+      "SecureRandom": "CRYPTO_SAFE"
+    },
+    "javax.crypto": {
+      "Cipher": "CRYPTO_SAFE"
+    },
+    "javax.xml": {
+      "DocumentBuilderFactory": "XXE"
+    },
+    "kotlinx.serialization": {
+      "Json": "SAFE"
+    },
+    "kotlin.system": {
+      "exitProcess": "SAFE"
+    },
+    "kotlin.text": {
+      "Regex": "SAFE"
+    },
+    "kotlin.collections": {
+      "listOf": "SAFE",
+      "mapOf": "SAFE"
+    },
+    "kotlin.concurrent": {
+      "thread": "EXEC"
+    },
+    "kotlin.math": {
+      "sqrt": "SAFE"
+    },
+    "kotlin.random": {
+      "Random": "CRYPTO_WEAK"
+    },
+    "kotlinx.coroutines": {
+      "launch": "EXEC",
+      "async": "EXEC"
+    }
+  }
+}

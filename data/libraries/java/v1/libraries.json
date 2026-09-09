@@ -1,0 +1,158 @@
+{
+  "language": "java",
+  "version": "1.0",
+  "libraries": {
+    "java.sql": {
+      "Statement.execute": "SQL",
+      "Statement.executeQuery": "SQL",
+      "PreparedStatement": "SQL_SAFE"
+    },
+    "javax.servlet": {
+      "HttpServletRequest": "WEB_INPUT",
+      "getParameter": "WEB_INPUT"
+    },
+    "java.io": {
+      "File": "FILE",
+      "FileInputStream": "FILE",
+      "FileOutputStream": "FILE"
+    },
+    "java.lang": {
+      "Runtime.exec": "EXEC",
+      "ProcessBuilder": "EXEC"
+    },
+    "java.net": {
+      "URL": "NETWORK",
+      "HttpURLConnection": "NETWORK"
+    },
+    "java.util": {
+      "Random": "CRYPTO_WEAK"
+    },
+    "java.security": {
+      "MessageDigest": "CRYPTO_SAFE"
+    },
+    "javax.xml": {
+      "DocumentBuilderFactory": "XXE"
+    },
+    "com.google.gson": {
+      "Gson.fromJson": "SAFE",
+      "Gson.toJson": "SAFE"
+    },
+    "org.springframework": {
+      "RestController": "WEB_INPUT",
+      "RequestMapping": "WEB_INPUT",
+      "GetMapping": "WEB_INPUT"
+    },
+    "org.apache.http": {
+      "HttpClient": "NETWORK",
+      "HttpGet": "NETWORK"
+    },
+    "okhttp3": {
+      "OkHttpClient": "NETWORK",
+      "Request": "NETWORK"
+    },
+    "com.fasterxml.jackson": {
+      "ObjectMapper": "SAFE"
+    },
+    "org.json": {
+      "JSONObject": "SAFE"
+    },
+    "java.nio.file": {
+      "Files": "FILE",
+      "Paths": "FILE"
+    },
+    "java.util.regex": {
+      "Pattern": "SAFE"
+    },
+    "java.util.zip": {
+      "ZipInputStream": "FILE"
+    },
+    "javax.crypto": {
+      "Cipher": "CRYPTO_SAFE"
+    },
+    "org.apache.commons": {
+      "FileUtils": "FILE",
+      "IOUtils": "FILE"
+    },
+    "org.slf4j": {
+      "Logger": "LOG"
+    },
+    "org.apache.logging": {
+      "log4j": "LOG"
+    },
+    "org.jsoup": {
+      "Jsoup": "SCRAPE"
+    },
+    "org.seleniumhq": {
+      "WebDriver": "SCRAPE"
+    }
+  },
+  "stdlib": {
+    "java.lang": {
+      "Runtime.exec": "EXEC",
+      "ProcessBuilder": "EXEC",
+      "System.out": "SAFE",
+      "System.getenv": "WEB_INPUT"
+    },
+    "java.io": {
+      "File": "FILE",
+      "FileInputStream": "FILE",
+      "FileOutputStream": "FILE",
+      "BufferedReader": "FILE",
+      "BufferedWriter": "FILE"
+    },
+    "java.nio.file": {
+      "Files": "FILE",
+      "Paths": "FILE"
+    },
+    "java.util": {
+      "Random": "CRYPTO_WEAK",
+      "Scanner": "WEB_INPUT",
+      "ArrayList": "SAFE",
+      "HashMap": "SAFE"
+    },
+    "java.net": {
+      "URL": "NETWORK",
+      "HttpURLConnection": "NETWORK",
+      "Socket": "NETWORK"
+    },
+    "java.sql": {
+      "Statement.execute": "SQL",
+      "Statement.executeQuery": "SQL",
+      "PreparedStatement": "SQL_SAFE",
+      "DriverManager": "SQL"
+    },
+    "java.security": {
+      "MessageDigest": "CRYPTO_SAFE",
+      "SecureRandom": "CRYPTO_SAFE"
+    },
+    "javax.crypto": {
+      "Cipher": "CRYPTO_SAFE"
+    },
+    "javax.servlet": {
+      "HttpServletRequest": "WEB_INPUT",
+      "getParameter": "WEB_INPUT"
+    },
+    "javax.xml": {
+      "DocumentBuilderFactory": "XXE"
+    },
+    "java.util.regex": {
+      "Pattern": "SAFE"
+    },
+    "java.util.zip": {
+      "ZipInputStream": "FILE"
+    },
+    "java.util.logging": {
+      "Logger": "LOG"
+    },
+    "java.time": {
+      "LocalDate": "SAFE"
+    },
+    "java.math": {
+      "BigInteger": "SAFE"
+    },
+    "java.util.concurrent": {
+      "ExecutorService": "EXEC",
+      "ThreadPoolExecutor": "EXEC"
+    }
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "language": "ruby",
+  "version": "1.0",
+  "libraries": {
+    "Net::HTTP": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "File": {
+      "read": "FILE",
+      "write": "FILE",
+      "open": "FILE",
+      "delete": "FILE"
+    },
+    "system": {
+      "": "EXEC"
+    },
+    "exec": {
+      "": "EXEC"
+    },
+    "ActiveRecord": {
+      "find": "SQL",
+      "where": "SQL",
+      "create": "SQL",
+      "update": "SQL"
+    },
+    "Digest::MD5": {
+      "": "CRYPTO_WEAK"
+    },
+    "BCrypt": {
+      "Password": "CRYPTO_SAFE"
+    },
+    "Rails": {
+      "params": "WEB_INPUT",
+      "render": "RENDER",
+      "redirect_to": "REDIRECT"
+    },
+    "Sinatra": {
+      "params": "WEB_INPUT",
+      "erb": "RENDER"
+    },
+    "HTTParty": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "RestClient": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "Nokogiri": {
+      "HTML": "SCRAPE",
+      "parse": "SCRAPE"
+    },
+    "Mechanize": {
+      "get": "SCRAPE"
+    },
+    "Dir": {
+      "glob": "FILE"
+    },
+    "Open3": {
+      "capture2": "EXEC",
+      "popen3": "EXEC"
+    },
+    "Sequel": {
+      "DB": "SQL",
+      "fetch": "SQL"
+    },
+    "Mongo": {
+      "Client": "NETWORK",
+      "find": "SQL"
+    },
+    "Redis": {
+      "get": "NETWORK",
+      "set": "NETWORK"
+    },
+    "Digest": {
+      "MD5": "CRYPTO_WEAK",
+      "SHA256": "CRYPTO_SAFE"
+    },
+    "SecureRandom": {
+      "hex": "CRYPTO_SAFE"
+    },
+    "JSON": {
+      "parse": "SAFE"
+    },
+    "YAML": {
+      "load": "DESERIALIZE",
+      "safe_load": "SAFE"
+    },
+    "Logger": {
+      "info": "LOG",
+      "error": "LOG"
+    }
+  },
+  "stdlib": {
+    "File": {
+      "read": "FILE",
+      "write": "FILE",
+      "open": "FILE",
+      "delete": "FILE",
+      "exist": "FILE"
+    },
+    "Dir": {
+      "glob": "FILE",
+      "entries": "FILE"
+    },
+    "system": {
+      "": "EXEC"
+    },
+    "exec": {
+      "": "EXEC"
+    },
+    "spawn": {
+      "": "EXEC"
+    },
+    "Open3": {
+      "capture2": "EXEC",
+      "popen3": "EXEC"
+    },
+    "IO": {
+      "read": "FILE",
+      "write": "FILE"
+    },
+    "Socket": {
+      "tcp": "NETWORK",
+      "udp": "NETWORK"
+    },
+    "TCPSocket": {
+      "new": "NETWORK"
+    },
+    "Net::HTTP": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "JSON": {
+      "parse": "SAFE",
+      "generate": "SAFE"
+    },
+    "YAML": {
+      "load": "DESERIALIZE",
+      "safe_load": "SAFE"
+    },
+    "Marshal": {
+      "load": "DESERIALIZE",
+      "dump": "SAFE"
+    },
+    "Digest": {
+      "MD5": "CRYPTO_WEAK",
+      "SHA256": "CRYPTO_SAFE"
+    },
+    "SecureRandom": {
+      "hex": "CRYPTO_SAFE",
+      "random_number": "CRYPTO_SAFE"
+    },
+    "rand": {
+      "": "CRYPTO_WEAK"
+    },
+    "Logger": {
+      "info": "LOG",
+      "error": "LOG",
+      "warn": "LOG"
+    },
+    "Kernel": {
+      "system": "EXEC",
+      "exec": "EXEC"
+    },
+    "ENV": {
+      "[]": "WEB_INPUT"
+    },
+    "ARGV": {
+      "": "WEB_INPUT"
+    },
+    "STDIN": {
+      "gets": "WEB_INPUT"
+    },
+    "StringIO": {
+      "new": "SAFE"
+    },
+    "Tempfile": {
+      "new": "FILE"
+    },
+    "Pathname": {
+      "new": "FILE"
+    },
+    "Regexp": {
+      "new": "SAFE"
+    },
+    "Thread": {
+      "new": "EXEC"
+    },
+    "Process": {
+      "spawn": "EXEC"
+    }
+  }
+}

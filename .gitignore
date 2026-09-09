@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Runtime data (keep library shapes, exclude tool schemas/vault)
+data/tool_schemas/
+data/vault/
+
+# Generated analysis reports (runtime output)
+/reports/
+
+# Morphē-chan shape memory (local snapshots — never commit)
+.morphe_snapshots/

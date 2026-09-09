@@ -1,0 +1,173 @@
+{
+  "language": "go",
+  "version": "1.0",
+  "libraries": {
+    "os": {
+      "exec.Command": "EXEC",
+      "Remove": "FILE",
+      "Open": "FILE",
+      "Create": "FILE"
+    },
+    "net/http": {
+      "Get": "NETWORK",
+      "Post": "NETWORK",
+      "Request": "WEB_INPUT",
+      "HandleFunc": "WEB_INPUT"
+    },
+    "database/sql": {
+      "Query": "SQL",
+      "Exec": "SQL",
+      "QueryRow": "SQL"
+    },
+    "crypto/rand": {
+      "Read": "CRYPTO_SAFE"
+    },
+    "math/rand": {
+      "Intn": "CRYPTO_WEAK"
+    },
+    "html/template": {
+      "Template": "RENDER"
+    },
+    "encoding/json": {
+      "Unmarshal": "SAFE",
+      "Marshal": "SAFE"
+    },
+    "github.com/gin-gonic/gin": {
+      "c": "WEB_INPUT",
+      "Context": "WEB_INPUT"
+    },
+    "github.com/labstack/echo": {
+      "c": "WEB_INPUT"
+    },
+    "gorm.io/gorm": {
+      "Find": "SQL",
+      "Create": "SQL",
+      "Where": "SQL"
+    },
+    "github.com/go-sql-driver/mysql": {
+      "Open": "SQL"
+    },
+    "github.com/redis/go-redis": {
+      "Get": "NETWORK",
+      "Set": "NETWORK"
+    },
+    "github.com/gorilla/mux": {
+      "NewRouter": "WEB_INPUT"
+    },
+    "golang.org/x/crypto": {
+      "bcrypt": "CRYPTO_SAFE"
+    },
+    "github.com/PuerkitoBio/goquery": {
+      "NewDocumentFromReader": "SCRAPE"
+    },
+    "github.com/chromedp/chromedp": {
+      "Run": "SCRAPE"
+    },
+    "io": {
+      "ReadAll": "FILE",
+      "WriteFile": "FILE"
+    },
+    "strings": {
+      "Split": "SAFE",
+      "Join": "SAFE"
+    },
+    "strconv": {
+      "Atoi": "SAFE"
+    },
+    "encoding/csv": {
+      "NewReader": "FILE"
+    },
+    "archive/zip": {
+      "NewReader": "FILE"
+    }
+  },
+  "stdlib": {
+    "os": {
+      "exec.Command": "EXEC",
+      "Remove": "FILE",
+      "Open": "FILE",
+      "Create": "FILE",
+      "ReadFile": "FILE",
+      "WriteFile": "FILE",
+      "Getenv": "WEB_INPUT"
+    },
+    "net/http": {
+      "Get": "NETWORK",
+      "Post": "NETWORK",
+      "Request": "WEB_INPUT",
+      "HandleFunc": "WEB_INPUT",
+      "ListenAndServe": "NETWORK"
+    },
+    "database/sql": {
+      "Query": "SQL",
+      "Exec": "SQL",
+      "QueryRow": "SQL",
+      "Open": "SQL"
+    },
+    "crypto/rand": {
+      "Read": "CRYPTO_SAFE"
+    },
+    "math/rand": {
+      "Intn": "CRYPTO_WEAK"
+    },
+    "crypto/sha256": {
+      "Sum256": "CRYPTO_SAFE"
+    },
+    "crypto/md5": {
+      "Sum": "CRYPTO_WEAK"
+    },
+    "encoding/json": {
+      "Unmarshal": "SAFE",
+      "Marshal": "SAFE"
+    },
+    "encoding/csv": {
+      "NewReader": "FILE",
+      "NewWriter": "FILE"
+    },
+    "io": {
+      "ReadAll": "FILE",
+      "WriteFile": "FILE"
+    },
+    "strings": {
+      "Split": "SAFE",
+      "Join": "SAFE"
+    },
+    "strconv": {
+      "Atoi": "SAFE"
+    },
+    "fmt": {
+      "Println": "SAFE",
+      "Sprintf": "SAFE"
+    },
+    "log": {
+      "Println": "LOG",
+      "Fatal": "LOG"
+    },
+    "net": {
+      "Listen": "NETWORK",
+      "Dial": "NETWORK"
+    },
+    "os/exec": {
+      "Command": "EXEC"
+    },
+    "path/filepath": {
+      "Join": "FILE",
+      "Clean": "FILE"
+    },
+    "archive/zip": {
+      "NewReader": "FILE"
+    },
+    "bufio": {
+      "NewScanner": "FILE"
+    },
+    "time": {
+      "Now": "SAFE"
+    },
+    "sync": {
+      "Mutex": "SAFE"
+    },
+    "context": {
+      "Background": "SAFE"
+    }
+  }
+}

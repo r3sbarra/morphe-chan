@@ -1,0 +1,144 @@
+{
+  "language": "typescript",
+  "version": "1.0",
+  "libraries": {
+    "express": {
+      "req": "WEB_INPUT",
+      "res.send": "RENDER",
+      "res.redirect": "REDIRECT"
+    },
+    "fs": {
+      "readFile": "FILE",
+      "writeFile": "FILE"
+    },
+    "child_process": {
+      "exec": "EXEC",
+      "spawn": "EXEC"
+    },
+    "mysql": {
+      "query": "SQL"
+    },
+    "pg": {
+      "query": "SQL"
+    },
+    "axios": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "cheerio": {
+      "load": "SCRAPE"
+    },
+    "puppeteer": {
+      "launch": "SCRAPE"
+    },
+    "typeorm": {
+      "find": "SQL",
+      "create": "SQL"
+    },
+    "prisma": {
+      "findMany": "SQL",
+      "create": "SQL"
+    },
+    "bcrypt": {
+      "hash": "CRYPTO_SAFE"
+    },
+    "jsonwebtoken": {
+      "sign": "CRYPTO_SAFE"
+    },
+    "crypto": {
+      "createHash": "CRYPTO_SAFE"
+    },
+    "zod": {
+      "parse": "SAFE"
+    },
+    "joi": {
+      "validate": "SAFE"
+    }
+  },
+  "stdlib": {
+    "fs": {
+      "readFile": "FILE",
+      "writeFile": "FILE",
+      "readFileSync": "FILE",
+      "writeFileSync": "FILE"
+    },
+    "path": {
+      "join": "FILE",
+      "resolve": "FILE"
+    },
+    "http": {
+      "request": "NETWORK",
+      "get": "NETWORK",
+      "createServer": "NETWORK"
+    },
+    "https": {
+      "request": "NETWORK",
+      "get": "NETWORK"
+    },
+    "child_process": {
+      "exec": "EXEC",
+      "execSync": "EXEC",
+      "spawn": "EXEC"
+    },
+    "crypto": {
+      "createHash": "CRYPTO_SAFE",
+      "randomBytes": "CRYPTO_SAFE"
+    },
+    "os": {
+      "readFile": "FILE",
+      "writeFile": "FILE"
+    },
+    "url": {
+      "parse": "SAFE"
+    },
+    "querystring": {
+      "parse": "SAFE"
+    },
+    "zlib": {
+      "gzip": "FILE"
+    },
+    "stream": {
+      "Readable": "SAFE",
+      "Writable": "SAFE"
+    },
+    "buffer": {
+      "Buffer": "SAFE"
+    },
+    "events": {
+      "EventEmitter": "SAFE"
+    },
+    "util": {
+      "promisify": "SAFE"
+    },
+    "assert": {
+      "equal": "SAFE"
+    },
+    "net": {
+      "createServer": "NETWORK",
+      "connect": "NETWORK"
+    },
+    "dns": {
+      "lookup": "NETWORK"
+    },
+    "cluster": {
+      "fork": "EXEC"
+    },
+    "worker_threads": {
+      "Worker": "EXEC"
+    },
+    "readline": {
+      "createInterface": "WEB_INPUT"
+    },
+    "process": {
+      "env": "WEB_INPUT",
+      "argv": "WEB_INPUT"
+    },
+    "console": {
+      "log": "SAFE",
+      "error": "SAFE"
+    },
+    "timers": {
+      "setTimeout": "SAFE"
+    }
+  }
+}

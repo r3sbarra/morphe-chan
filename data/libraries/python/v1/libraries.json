@@ -1,0 +1,410 @@
+{
+  "language": "python",
+  "version": "1.0",
+  "libraries": {
+    "os": {
+      "system": "EXEC",
+      "popen": "EXEC",
+      "remove": "FILE",
+      "unlink": "FILE",
+      "path.join": "FILE",
+      "environ": "WEB_INPUT",
+      "listdir": "FILE",
+      "walk": "FILE"
+    },
+    "subprocess": {
+      "run": "EXEC",
+      "call": "EXEC",
+      "Popen": "EXEC",
+      "check_output": "EXEC"
+    },
+    "requests": {
+      "get": "NETWORK",
+      "post": "NETWORK",
+      "put": "NETWORK"
+    },
+    "flask": {
+      "request": "WEB_INPUT",
+      "render_template": "RENDER",
+      "redirect": "REDIRECT",
+      "make_response": "RENDER"
+    },
+    "django": {
+      "request": "WEB_INPUT",
+      "render": "RENDER",
+      "redirect": "REDIRECT",
+      "HttpResponse": "RENDER"
+    },
+    "sqlite3": {
+      "execute": "SQL",
+      "executemany": "SQL"
+    },
+    "mysql": {
+      "execute": "SQL",
+      "query": "SQL"
+    },
+    "psycopg2": {
+      "execute": "SQL",
+      "query": "SQL"
+    },
+    "pickle": {
+      "loads": "DESERIALIZE",
+      "load": "DESERIALIZE"
+    },
+    "yaml": {
+      "load": "DESERIALIZE"
+    },
+    "json": {
+      "loads": "SAFE",
+      "load": "SAFE"
+    },
+    "hashlib": {
+      "md5": "CRYPTO_WEAK",
+      "sha1": "CRYPTO_WEAK",
+      "sha256": "CRYPTO_SAFE"
+    },
+    "secrets": {
+      "token_hex": "CRYPTO_SAFE"
+    },
+    "random": {
+      "random": "CRYPTO_WEAK",
+      "randint": "CRYPTO_WEAK"
+    },
+    "html": {
+      "escape": "SANITIZE"
+    },
+    "urllib": {
+      "request.urlopen": "NETWORK",
+      "parse.quote": "SANITIZE"
+    },
+    "logging": {
+      "info": "LOG",
+      "warning": "LOG",
+      "error": "LOG"
+    },
+    "ldap3": {
+      "search": "LDAP",
+      "bind": "LDAP"
+    },
+    "jinja2": {
+      "Template": "TEMPLATE"
+    },
+    "bs4": {
+      "BeautifulSoup": "SCRAPE",
+      "find": "SCRAPE",
+      "find_all": "SCRAPE"
+    },
+    "BeautifulSoup": {
+      "": "SCRAPE"
+    },
+    "fastapi": {
+      "Request": "WEB_INPUT",
+      "JSONResponse": "RENDER"
+    },
+    "aiohttp": {
+      "ClientSession": "NETWORK",
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "httpx": {
+      "get": "NETWORK",
+      "post": "NETWORK"
+    },
+    "selenium": {
+      "webdriver": "SCRAPE",
+      "find_element": "SCRAPE",
+      "find_elements": "SCRAPE"
+    },
+    "scrapy": {
+      "Request": "SCRAPE",
+      "Selector": "SCRAPE"
+    },
+    "pandas": {
+      "read_csv": "FILE",
+      "read_sql": "SQL",
+      "to_csv": "FILE"
+    },
+    "numpy": {
+      "load": "FILE",
+      "save": "FILE"
+    },
+    "cryptography": {
+      "Fernet": "CRYPTO_SAFE"
+    },
+    "paramiko": {
+      "SSHClient": "NETWORK",
+      "exec_command": "EXEC"
+    },
+    "redis": {
+      "get": "NETWORK",
+      "set": "NETWORK"
+    },
+    "celery": {
+      "task": "EXEC"
+    },
+    "boto3": {
+      "client": "NETWORK",
+      "resource": "NETWORK"
+    },
+    "PIL": {
+      "Image": "FILE"
+    },
+    "matplotlib": {
+      "savefig": "FILE"
+    },
+    "pytest": {
+      "raises": "SAFE"
+    },
+    "unittest": {
+      "TestCase": "SAFE"
+    },
+    "asyncio": {
+      "run": "EXEC"
+    },
+    "multiprocessing": {
+      "Process": "EXEC",
+      "Pool": "EXEC"
+    },
+    "socket": {
+      "socket": "NETWORK",
+      "connect": "NETWORK"
+    },
+    "ftplib": {
+      "FTP": "NETWORK"
+    },
+    "smtplib": {
+      "SMTP": "NETWORK",
+      "sendmail": "NETWORK"
+    },
+    "email": {
+      "message": "SAFE"
+    },
+    "zipfile": {
+      "ZipFile": "FILE"
+    },
+    "tarfile": {
+      "open": "FILE"
+    },
+    "shutil": {
+      "copy": "FILE",
+      "move": "FILE",
+      "rmtree": "FILE"
+    },
+    "glob": {
+      "glob": "FILE"
+    },
+    "tempfile": {
+      "NamedTemporaryFile": "FILE"
+    },
+    "sqlalchemy": {
+      "create_engine": "SQL",
+      "text": "SQL",
+      "select": "SQL"
+    },
+    "peewee": {
+      "Model": "SQL",
+      "select": "SQL"
+    },
+    "pymongo": {
+      "MongoClient": "NETWORK",
+      "find": "SQL",
+      "insert_one": "SQL"
+    },
+    "elasticsearch": {
+      "search": "SQL",
+      "index": "SQL"
+    },
+    "kafka": {
+      "KafkaProducer": "NETWORK",
+      "KafkaConsumer": "NETWORK"
+    },
+    "grpc": {
+      "insecure_channel": "NETWORK"
+    },
+    "tensorflow": {
+      "keras": "EXEC"
+    },
+    "torch": {
+      "load": "FILE",
+      "save": "FILE"
+    }
+  },
+  "stdlib": {
+    "os": {
+      "system": "EXEC",
+      "popen": "EXEC",
+      "remove": "FILE",
+      "unlink": "FILE",
+      "path.join": "FILE",
+      "environ": "WEB_INPUT",
+      "listdir": "FILE",
+      "walk": "FILE",
+      "getcwd": "FILE"
+    },
+    "sys": {
+      "argv": "WEB_INPUT",
+      "exit": "SAFE"
+    },
+    "json": {
+      "loads": "SAFE",
+      "load": "SAFE",
+      "dumps": "SAFE"
+    },
+    "re": {
+      "search": "SAFE",
+      "match": "SAFE",
+      "sub": "SAFE"
+    },
+    "math": {
+      "sqrt": "SAFE",
+      "pow": "SAFE"
+    },
+    "random": {
+      "random": "CRYPTO_WEAK",
+      "randint": "CRYPTO_WEAK",
+      "choice": "CRYPTO_WEAK"
+    },
+    "secrets": {
+      "token_hex": "CRYPTO_SAFE",
+      "token_urlsafe": "CRYPTO_SAFE"
+    },
+    "hashlib": {
+      "md5": "CRYPTO_WEAK",
+      "sha1": "CRYPTO_WEAK",
+      "sha256": "CRYPTO_SAFE"
+    },
+    "socket": {
+      "socket": "NETWORK",
+      "connect": "NETWORK",
+      "bind": "NETWORK"
+    },
+    "urllib": {
+      "request.urlopen": "NETWORK",
+      "parse.quote": "SANITIZE"
+    },
+    "http": {
+      "server": "NETWORK",
+      "client": "NETWORK"
+    },
+    "subprocess": {
+      "run": "EXEC",
+      "call": "EXEC",
+      "Popen": "EXEC",
+      "check_output": "EXEC"
+    },
+    "shutil": {
+      "copy": "FILE",
+      "move": "FILE",
+      "rmtree": "FILE"
+    },
+    "glob": {
+      "glob": "FILE"
+    },
+    "tempfile": {
+      "NamedTemporaryFile": "FILE"
+    },
+    "zipfile": {
+      "ZipFile": "FILE"
+    },
+    "tarfile": {
+      "open": "FILE"
+    },
+    "sqlite3": {
+      "execute": "SQL",
+      "executemany": "SQL"
+    },
+    "logging": {
+      "info": "LOG",
+      "warning": "LOG",
+      "error": "LOG"
+    },
+    "pickle": {
+      "loads": "DESERIALIZE",
+      "load": "DESERIALIZE"
+    },
+    "yaml": {
+      "load": "DESERIALIZE"
+    },
+    "html": {
+      "escape": "SANITIZE"
+    },
+    "csv": {
+      "reader": "FILE",
+      "writer": "FILE"
+    },
+    "xml": {
+      "etree": "XXE"
+    },
+    "email": {
+      "message": "SAFE"
+    },
+    "smtplib": {
+      "SMTP": "NETWORK",
+      "sendmail": "NETWORK"
+    },
+    "ftplib": {
+      "FTP": "NETWORK"
+    },
+    "asyncio": {
+      "run": "EXEC"
+    },
+    "multiprocessing": {
+      "Process": "EXEC",
+      "Pool": "EXEC"
+    },
+    "threading": {
+      "Thread": "EXEC"
+    },
+    "datetime": {
+      "now": "SAFE"
+    },
+    "time": {
+      "sleep": "SAFE"
+    },
+    "collections": {
+      "Counter": "SAFE",
+      "defaultdict": "SAFE"
+    },
+    "itertools": {
+      "chain": "SAFE"
+    },
+    "functools": {
+      "reduce": "SAFE"
+    },
+    "pathlib": {
+      "Path": "FILE"
+    },
+    "io": {
+      "open": "FILE",
+      "StringIO": "SAFE"
+    },
+    "base64": {
+      "b64encode": "SAFE",
+      "b64decode": "SAFE"
+    },
+    "struct": {
+      "pack": "SAFE"
+    },
+    "ctypes": {
+      "CDLL": "EXEC"
+    },
+    "platform": {
+      "system": "SAFE"
+    },
+    "getpass": {
+      "getpass": "WEB_INPUT"
+    },
+    "argparse": {
+      "ArgumentParser": "WEB_INPUT"
+    },
+    "configparser": {
+      "ConfigParser": "FILE"
+    },
+    "traceback": {
+      "format_exc": "SAFE"
+    },
+    "warnings": {
+      "warn": "SAFE"
+    }
+  }
+}

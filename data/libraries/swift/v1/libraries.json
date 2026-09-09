@@ -1,0 +1,106 @@
+{
+  "language": "swift",
+  "version": "1.0",
+  "libraries": {
+    "Foundation": {
+      "URLSession": "NETWORK",
+      "FileManager": "FILE",
+      "Data": "SAFE"
+    },
+    "Process": {
+      "": "EXEC"
+    },
+    "CryptoKit": {
+      "SHA256": "CRYPTO_SAFE"
+    },
+    "SwiftSoup": {
+      "parse": "SCRAPE"
+    },
+    "Alamofire": {
+      "AF": "NETWORK",
+      "request": "NETWORK"
+    },
+    "SQLite": {
+      "execute": "SQL",
+      "query": "SQL"
+    },
+    "GRDB": {
+      "Database": "SQL"
+    },
+    "Vapor": {
+      "Request": "WEB_INPUT",
+      "Response": "RENDER"
+    },
+    "Perfect": {
+      "HTTPRequest": "WEB_INPUT"
+    }
+  },
+  "stdlib": {
+    "Foundation": {
+      "URLSession": "NETWORK",
+      "FileManager": "FILE",
+      "Data": "SAFE",
+      "UserDefaults": "SAFE",
+      "Process": "EXEC"
+    },
+    "Process": {
+      "": "EXEC"
+    },
+    "CryptoKit": {
+      "SHA256": "CRYPTO_SAFE"
+    },
+    "Security": {
+      "SecRandomCopyBytes": "CRYPTO_SAFE"
+    },
+    "Dispatch": {
+      "async": "EXEC"
+    },
+    "os": {
+      "system": "EXEC"
+    },
+    "Globals": {
+      "print": "SAFE"
+    },
+    "String": {
+      "split": "SAFE",
+      "contains": "SAFE"
+    },
+    "Array": {
+      "map": "SAFE",
+      "filter": "SAFE"
+    },
+    "Dictionary": {
+      "keys": "SAFE"
+    },
+    "Set": {
+      "insert": "SAFE"
+    },
+    "Int": {
+      "parse": "SAFE"
+    },
+    "Double": {
+      "parse": "SAFE"
+    },
+    "Bool": {
+      "parse": "SAFE"
+    },
+    "Optional": {
+      "map": "SAFE"
+    },
+    "Result": {
+      "map": "SAFE"
+    },
+    "Error": {
+      "localizedDescription": "SAFE"
+    },
+    "URL": {
+      "init": "NETWORK"
+    },
+    "Date": {
+      "now": "SAFE"
+    },
+    "UUID": {
+      "uuidString": "CRYPTO_SAFE"
+    }
+  }
+}

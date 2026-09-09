@@ -1,0 +1,262 @@
+{
+  "language": "php",
+  "version": "1.0",
+  "libraries": {
+    "mysqli": {
+      "query": "SQL",
+      "prepare": "SQL_SAFE"
+    },
+    "PDO": {
+      "prepare": "SQL_SAFE",
+      "query": "SQL",
+      "exec": "SQL"
+    },
+    "shell_exec": {
+      "": "EXEC"
+    },
+    "system": {
+      "": "EXEC"
+    },
+    "exec": {
+      "": "EXEC"
+    },
+    "file_get_contents": {
+      "": "FILE"
+    },
+    "file_put_contents": {
+      "": "FILE"
+    },
+    "unserialize": {
+      "": "DESERIALIZE"
+    },
+    "md5": {
+      "": "CRYPTO_WEAK"
+    },
+    "password_hash": {
+      "": "CRYPTO_SAFE"
+    },
+    "Laravel": {
+      "DB": "SQL",
+      "Model": "SQL",
+      "view": "RENDER",
+      "redirect": "REDIRECT"
+    },
+    "Symfony": {
+      "Request": "WEB_INPUT",
+      "Response": "RENDER"
+    },
+    "curl": {
+      "init": "NETWORK",
+      "exec": "NETWORK"
+    },
+    "fopen": {
+      "": "FILE"
+    },
+    "fwrite": {
+      "": "FILE"
+    },
+    "unlink": {
+      "": "FILE"
+    },
+    "mkdir": {
+      "": "FILE"
+    },
+    "json_decode": {
+      "": "SAFE"
+    },
+    "json_encode": {
+      "": "SAFE"
+    },
+    "htmlspecialchars": {
+      "": "SANITIZE"
+    },
+    "strip_tags": {
+      "": "SANITIZE"
+    },
+    "password_verify": {
+      "": "CRYPTO_SAFE"
+    },
+    "openssl_encrypt": {
+      "": "CRYPTO_SAFE"
+    },
+    "random_bytes": {
+      "": "CRYPTO_SAFE"
+    },
+    "mt_rand": {
+      "": "CRYPTO_WEAK"
+    },
+    "DOMDocument": {
+      "loadXML": "XXE"
+    },
+    "SimpleXMLElement": {
+      "": "XXE"
+    }
+  },
+  "stdlib": {
+    "file_get_contents": {
+      "": "FILE"
+    },
+    "file_put_contents": {
+      "": "FILE"
+    },
+    "fopen": {
+      "": "FILE"
+    },
+    "fwrite": {
+      "": "FILE"
+    },
+    "fread": {
+      "": "FILE"
+    },
+    "unlink": {
+      "": "FILE"
+    },
+    "mkdir": {
+      "": "FILE"
+    },
+    "rmdir": {
+      "": "FILE"
+    },
+    "system": {
+      "": "EXEC"
+    },
+    "exec": {
+      "": "EXEC"
+    },
+    "shell_exec": {
+      "": "EXEC"
+    },
+    "passthru": {
+      "": "EXEC"
+    },
+    "popen": {
+      "": "EXEC"
+    },
+    "proc_open": {
+      "": "EXEC"
+    },
+    "json_decode": {
+      "": "SAFE"
+    },
+    "json_encode": {
+      "": "SAFE"
+    },
+    "htmlspecialchars": {
+      "": "SANITIZE"
+    },
+    "strip_tags": {
+      "": "SANITIZE"
+    },
+    "md5": {
+      "": "CRYPTO_WEAK"
+    },
+    "sha1": {
+      "": "CRYPTO_WEAK"
+    },
+    "password_hash": {
+      "": "CRYPTO_SAFE"
+    },
+    "password_verify": {
+      "": "CRYPTO_SAFE"
+    },
+    "openssl_encrypt": {
+      "": "CRYPTO_SAFE"
+    },
+    "random_bytes": {
+      "": "CRYPTO_SAFE"
+    },
+    "mt_rand": {
+      "": "CRYPTO_WEAK"
+    },
+    "rand": {
+      "": "CRYPTO_WEAK"
+    },
+    "unserialize": {
+      "": "DESERIALIZE"
+    },
+    "serialize": {
+      "": "SAFE"
+    },
+    "curl_init": {
+      "": "NETWORK"
+    },
+    "curl_exec": {
+      "": "NETWORK"
+    },
+    "mysqli_connect": {
+      "": "SQL"
+    },
+    "mysqli_query": {
+      "": "SQL"
+    },
+    "pg_query": {
+      "": "SQL"
+    },
+    "pg_connect": {
+      "": "SQL"
+    },
+    "DOMDocument": {
+      "loadXML": "XXE"
+    },
+    "SimpleXMLElement": {
+      "": "XXE"
+    },
+    "error_log": {
+      "": "LOG"
+    },
+    "trigger_error": {
+      "": "LOG"
+    },
+    "include": {
+      "": "FILE"
+    },
+    "require": {
+      "": "FILE"
+    },
+    "header": {
+      "": "RENDER"
+    },
+    "echo": {
+      "": "RENDER"
+    },
+    "print": {
+      "": "RENDER"
+    },
+    "isset": {
+      "": "SAFE"
+    },
+    "empty": {
+      "": "SAFE"
+    },
+    "count": {
+      "": "SAFE"
+    },
+    "strlen": {
+      "": "SAFE"
+    },
+    "substr": {
+      "": "SAFE"
+    },
+    "str_replace": {
+      "": "SAFE"
+    },
+    "preg_match": {
+      "": "SAFE"
+    },
+    "preg_replace": {
+      "": "SAFE"
+    },
+    "filter_var": {
+      "": "SANITIZE"
+    },
+    "intval": {
+      "": "SAFE"
+    },
+    "session_start": {
+      "": "SAFE"
+    },
+    "setcookie": {
+      "": "SAFE"
+    }
+  }
+}

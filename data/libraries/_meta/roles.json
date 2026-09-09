@@ -1,0 +1,22 @@
+{
+  "role_danger": {
+    "EXEC": 1.0,
+    "SQL": 1.0,
+    "DESERIALIZE": 0.9,
+    "XXE": 0.9,
+    "LDAP": 0.9,
+    "TEMPLATE": 0.8,
+    "FILE": 0.8,
+    "NETWORK": 0.7,
+    "RENDER": 0.7,
+    "REDIRECT": 0.6,
+    "CRYPTO_WEAK": 0.6,
+    "LOG": 0.4,
+    "WEB_INPUT": 0.3,
+    "SAFE": 0.0,
+    "SANITIZE": 0.0,
+    "CRYPTO_SAFE": 0.0,
+    "SQL_SAFE": 0.0,
+    "SCRAPE": 0.7
+  }
+}
