@@ -53,6 +53,7 @@ class AnalysisReport:
     patterns: List[Dict[str, Any]] = field(default_factory=list)
     vulnerabilities: List[Dict[str, Any]] = field(default_factory=list)
     sinks: List[str] = field(default_factory=list)
+    in_out_paths: List[Dict[str, Any]] = field(default_factory=list)
 
     # project-level
     composite: Dict[str, float] = field(default_factory=dict)
@@ -91,6 +92,7 @@ def _now() -> datetime:
     return datetime.now()
 
 
+# ── Collector: run all dimensions on target ─────────────────────────────────
 def collect_analysis(
     analysis_type: str,
     target: str,
@@ -98,15 +100,13 @@ def collect_analysis(
     lang: Optional[str] = None,
     project_dir: Optional[str] = None,
 ) -> AnalysisReport:
-    """Run the full analysis pipeline and collect every dimension.
+    """Run every analysis dimension on `code` or `project_dir`.
 
-    This is the single entry point used by the CLI `--report` flag. It gathers
-    shape, enriched vector, efficiency, value-flow, algorithms, patterns,
-    vulnerabilities, and (for project targets) the composite vector + imports.
+    Returns the populated `AnalysisReport`.
     """
     from code_shape.core.code_shape_core import shape as _shape
-    from code_shape.core.enriched_shape import enriched_shape
     from code_shape.core.structural_shape import structural_signature
+    from code_shape.core.enriched_shape import enriched_shape
     from code_shape.analysis.efficiency_shape import efficiency_summary
     from code_shape.analysis.enriched_efficiency import enriched_efficiency
     from code_shape.core.value_flow_shape import value_flow_shape, flow_path
@@ -157,9 +157,12 @@ def collect_analysis(
             rep.patterns = detect_patterns(code, lang or "python")
         except Exception:
             rep.patterns = []
+        target_file = target if isinstance(target, str) and Path(target).is_file() else None
         try:
             rep.vulnerabilities = (
-                find_precise_issues(code) + find_buffer_overflows(code) + detect_vulns_v2(code, lang or "python")
+                find_precise_issues(code, file_path=target_file, lang=lang)
+                + find_buffer_overflows(code, file_path=target_file, lang=lang)
+                + detect_vulns_v2(code, lang or "python")
             )
         except Exception:
             rep.vulnerabilities = []
@@ -167,6 +170,11 @@ def collect_analysis(
             rep.sinks = [s["category"] for s in detect_sinks(code)]
         except Exception:
             rep.sinks = []
+        try:
+            from code_shape.core.dataflow import trace_in_to_out_paths
+            rep.in_out_paths = trace_in_to_out_paths(code, file_path=target_file, lang=lang or "python")
+        except Exception:
+            rep.in_out_paths = []
 
     if project_dir is not None:
         from code_shape.core.composite_vector import composite_vector

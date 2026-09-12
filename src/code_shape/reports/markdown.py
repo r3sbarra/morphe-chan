@@ -124,15 +124,40 @@ def render_markdown(rep: AnalysisReport) -> str:
         L.append("")
         L.append(f"**{len(rep.vulnerabilities)} finding(s)**")
         L.append("")
-        L.append("| Type | Line | Sink | Source |")
-        L.append("|---|---|---|---|")
+        L.append("| Severity | Type (CWE) | Location | Line | Shape Part | Sink / Path |")
+        L.append("|---|---|---|---|---|---|")
         for v in rep.vulnerabilities:
-            L.append(f"| {v.get('type', '?')} | {v.get('line', '?')} | `{v.get('sink', '?')}` | {v.get('source', '?')} |")
+            sev = v.get("severity", "MEDIUM")
+            cwe = v.get("cwe")
+            type_cwe = f"{v.get('type', '?')} ({cwe})" if cwe else v.get("type", "?")
+            fn = v.get("function") or "<module>"
+            f_path = v.get("file")
+            loc = f"`{f_path}:{fn}()`" if f_path and f_path != "<snippet>" else f"`{fn}()`"
+            sp = f"`{v['shape_part']}`" if v.get("shape_part") else "`UNKNOWN`"
+            path_str = f"`{v['path']}`" if v.get("path") else f"`{v.get('sink', '?')}`"
+            L.append(f"| **{sev}** | {type_cwe} | {loc} | L{v.get('line', '?')} | {sp} | {path_str} |")
         L.append("")
     elif rep.analysis_type in ("vulns", "analyze", "enriched", "project"):
         L.append("## Vulnerabilities / Security Findings")
         L.append("")
         L.append("No vulnerabilities detected. ✅")
+        L.append("")
+
+    # ── In-to-Out Dataflow Paths ──────────────────────────────────────────
+    paths = getattr(rep, "in_out_paths", None)
+    if paths:
+        L.append("## In-to-Out Dataflow Paths")
+        L.append("")
+        L.append(f"**{len(paths)} end-to-end flow path(s) traced:**")
+        L.append("")
+        L.append("| Function | In (Source) | Out (Sink / Exit) | Hops | Shape Sequence | Status |")
+        L.append("|---|---|---|---|---|---|")
+        for p in paths:
+            vuln_str = f"⚠️ **{p.get('vulnerability_type', 'VULN')}** ({p.get('cwe', '')})" if p.get("is_vulnerable") else "Clean ✅"
+            src_str = f"`{p['source']['name']}` (L{p['source']['line']})"
+            snk_str = f"`{p['sink']['name']}` (L{p['sink']['line']})"
+            fn_name = p.get("function") or "<module>"
+            L.append(f"| `{fn_name}()` | {src_str} | {snk_str} | {p.get('length', 0)} | `{p.get('shape_sequence', '')}` | {vuln_str} |")
         L.append("")
 
     # ── Sinks ─────────────────────────────────────────────────────────────

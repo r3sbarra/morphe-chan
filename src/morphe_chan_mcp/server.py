@@ -30,10 +30,15 @@ _analyzer = CodeShapeAnalyzer()
 
 
 def _read_input(arg: str) -> str:
-    """Read code from a file if arg is a file, else treat as inline code."""
-    p = Path(arg)
-    if p.exists() and p.is_file():
-        return p.read_text(encoding="utf-8", errors="replace")
+    """Read code from a file if arg is a file path, else treat as inline code."""
+    if not arg or "\n" in arg or "\r" in arg or "\0" in arg or len(arg) > 4096:
+        return arg
+    try:
+        p = Path(arg)
+        if p.is_file():
+            return p.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError):
+        pass
     return arg
 
 
@@ -115,12 +120,26 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="morphe_vulns",
-            description="Detect security vulnerabilities (SQLi, XSS, RCE, SSRF, weak crypto, etc.) with line numbers.",
+            description="Detect security vulnerabilities mapped to MITRE CWE Top 25 & OWASP Top 10 with line numbers, exploitability scoring, and CVE references.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "description": "Code snippet or file path"},
                     "lang": {"type": "string", "description": "Language hint"},
+                },
+                "required": ["code"],
+            },
+        ),
+        types.Tool(
+            name="morphe_paths",
+            description="Trace end-to-end dataflow paths from inputs to returns and dangerous sinks with geometric shape sequences.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Code snippet or file path"},
+                    "lang": {"type": "string", "description": "Language hint"},
+                    "fn": {"type": "string", "description": "Optional function name to filter by"},
+                    "vuln_only": {"type": "boolean", "description": "Only return paths reaching vulnerable sinks"},
                 },
                 "required": ["code"],
             },
@@ -148,7 +167,7 @@ async def list_tools() -> list[types.Tool]:
                     "lang": {"type": "string", "default": "python", "description": "Language (default python)"},
                     "name": {"type": "string", "description": "Optional function/class name"},
                 },
-                "required": ["intent", "shape"],
+                "required": ["intent"],
             },
         ),
         types.Tool(
@@ -191,6 +210,11 @@ async def list_tools() -> list[types.Tool]:
             description="List the 13 supported programming languages.",
             inputSchema={"type": "object", "properties": {}},
         ),
+        types.Tool(
+            name="morphe_intents",
+            description="List all supported synthesis intents, shapes, algorithms, and design patterns, along with supported languages.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 
@@ -219,18 +243,37 @@ def _dispatch(name: str, args: dict[str, Any]) -> Any:
         from code_shape.analysis.pattern_detector import detect_patterns
         return detect_patterns(_read_input(args["code"]), args.get("lang")) or []
     if name == "morphe_vulns":
+        raw = args["code"]
+        target_file = raw if isinstance(raw, str) and not ("\n" in raw or len(raw) > 255) and Path(raw).is_file() else None
+        code = _read_input(raw)
+        lang = args.get("lang")
         from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
-        return find_precise_issues(_read_input(args["code"])) + find_buffer_overflows(_read_input(args["code"]))
+        return find_precise_issues(code, file_path=target_file, lang=lang) + find_buffer_overflows(code, file_path=target_file, lang=lang)
+    if name == "morphe_paths":
+        raw = args["code"]
+        target_file = raw if isinstance(raw, str) and not ("\n" in raw or len(raw) > 255) and Path(raw).is_file() else None
+        code = _read_input(raw)
+        lang = args.get("lang") or "python"
+        from code_shape.core.dataflow import trace_in_to_out_paths
+        paths = trace_in_to_out_paths(code, file_path=target_file, lang=lang)
+        if args.get("fn"):
+            paths = [p for p in paths if p.get("function") == args["fn"]]
+        if args.get("vuln_only"):
+            paths = [p for p in paths if p.get("is_vulnerable")]
+        return paths
     if name == "morphe_efficiency":
         from code_shape.analysis.enriched_efficiency import enriched_efficiency
         return enriched_efficiency(_read_input(args["code"]), args.get("lang"))
     if name == "morphe_synthesize":
         from code_shape.synthesis.shape_library_synth import synthesize_any, synthesize_algorithm, synthesize_class
-        code = synthesize_any(args["intent"], args["shape"], args.get("lang", "python"), args.get("name"))
+        lang = args.get("lang") or "python"
+        fn_name = args.get("name") or "fn"
+        shape_arg = args.get("shape") or ""
+        code = synthesize_any(args["intent"], shape_arg, lang, fn_name)
         if not code:
-            code = synthesize_algorithm(args["intent"], args.get("lang", "python"), args.get("name"))
+            code = synthesize_algorithm(args["intent"], lang, fn_name)
         if not code:
-            code = synthesize_class(args["intent"], args.get("lang", "python"), args.get("name"))
+            code = synthesize_class(args["intent"], lang, fn_name)
         return {"code": code} if code else {"error": f"cannot synthesize intent '{args['intent']}'"}
     if name == "morphe_project":
         return _analyzer.project_summary(args["dir"])
@@ -246,6 +289,9 @@ def _dispatch(name: str, args: dict[str, Any]) -> Any:
         }
     if name == "morphe_languages":
         return _analyzer.languages()
+    if name == "morphe_intents":
+        from code_shape.synthesis.shape_library_synth import list_synthesis_intents
+        return list_synthesis_intents()
     raise ValueError(f"Unknown tool: {name}")
 
 

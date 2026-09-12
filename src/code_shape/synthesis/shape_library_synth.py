@@ -21,27 +21,41 @@ from code_shape.analysis.algorithm_detector import detect_algorithm
 ALGORITHM_TEMPLATES = {
     "binary_search": {
         "python": "def {name}(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1",
+        "javascript": "function {name}(arr, target) {{\n    let low = 0, high = arr.length - 1;\n    while (low <= high) {{\n        const mid = Math.floor((low + high) / 2);\n        if (arr[mid] === target) return mid;\n        else if (arr[mid] < target) low = mid + 1;\n        else high = mid - 1;\n    }}\n    return -1;\n}}",
+        "go": "func {name}(arr []int, target int) int {{\n    low, high := 0, len(arr)-1\n    for low <= high {{\n        mid := (low + high) / 2\n        if arr[mid] == target {{\n            return mid\n        }} else if arr[mid] < target {{\n            low = mid + 1\n        }} else {{\n            high = mid - 1\n        }}\n    }}\n    return -1\n}}",
     },
     "linear_search": {
         "python": "def {name}(arr, target):\n    for i in range(len(arr)):\n        if arr[i] == target:\n            return i\n    return -1",
+        "javascript": "function {name}(arr, target) {{\n    for (let i = 0; i < arr.length; i++) {{\n        if (arr[i] === target) return i;\n    }}\n    return -1;\n}}",
+        "go": "func {name}(arr []int, target int) int {{\n    for i, v := range arr {{\n        if v == target {{\n            return i\n        }}\n    }}\n    return -1\n}}",
     },
     "bubble_sort": {
         "python": "def {name}(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n    return arr",
+        "javascript": "function {name}(arr) {{\n    const n = arr.length;\n    for (let i = 0; i < n; i++) {{\n        for (let j = 0; j < n - i - 1; j++) {{\n            if (arr[j] > arr[j + 1]) {{\n                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];\n            }}\n        }}\n    }}\n    return arr;\n}}",
+        "go": "func {name}(arr []int) []int {{\n    n := len(arr)\n    for i := 0; i < n; i++ {{\n        for j := 0; j < n-i-1; j++ {{\n            if arr[j] > arr[j+1] {{\n                arr[j], arr[j+1] = arr[j+1], arr[j]\n            }}\n        }}\n    }}\n    return arr\n}}",
     },
     "merge_sort": {
         "python": "def {name}(arr):\n    if len(arr) <= 1:\n        return arr\n    mid = len(arr) // 2\n    left = {name}(arr[:mid])\n    right = {name}(arr[mid:])\n    return merge(left, right)",
+        "javascript": "function {name}(arr) {{\n    if (arr.length <= 1) return arr;\n    const mid = Math.floor(arr.length / 2);\n    const left = {name}(arr.slice(0, mid));\n    const right = {name}(arr.slice(mid));\n    return merge(left, right);\n}}",
     },
     "quick_sort": {
         "python": "def {name}(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return {name}(left) + middle + {name}(right)",
+        "javascript": "function {name}(arr) {{\n    if (arr.length <= 1) return arr;\n    const pivot = arr[Math.floor(arr.length / 2)];\n    const left = arr.filter(x => x < pivot);\n    const middle = arr.filter(x => x === pivot);\n    const right = arr.filter(x => x > pivot);\n    return [...{name}(left), ...middle, ...{name}(right)];\n}}",
     },
     "fibonacci": {
         "python": "def {name}(n):\n    if n <= 1:\n        return n\n    return {name}(n - 1) + {name}(n - 2)",
+        "javascript": "function {name}(n) {{\n    if (n <= 1) return n;\n    return {name}(n - 1) + {name}(n - 2);\n}}",
+        "go": "func {name}(n int) int {{\n    if n <= 1 {{\n        return n\n    }}\n    return {name}(n-1) + {name}(n-2)\n}}",
     },
     "factorial": {
         "python": "def {name}(n):\n    if n <= 1:\n        return 1\n    return n * {name}(n - 1)",
+        "javascript": "function {name}(n) {{\n    if (n <= 1) return 1;\n    return n * {name}(n - 1);\n}}",
+        "go": "func {name}(n int) int {{\n    if n <= 1 {{\n        return 1\n    }}\n    return n * {name}(n-1)\n}}",
     },
     "two_sum": {
         "python": "def {name}(nums, target):\n    seen = {{}}\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in seen:\n            return [seen[diff], i]\n        seen[num] = i\n    return []",
+        "javascript": "function {name}(nums, target) {{\n    const seen = new Map();\n    for (let i = 0; i < nums.length; i++) {{\n        const diff = target - nums[i];\n        if (seen.has(diff)) return [seen.get(diff), i];\n        seen.set(nums[i], i);\n    }}\n    return [];\n}}",
+        "go": "func {name}(nums []int, target int) []int {{\n    seen := make(map[int]int)\n    for i, num := range nums {{\n        diff := target - num\n        if idx, ok := seen[diff]; ok {{\n            return []int{{idx, i}}\n        }}\n        seen[num] = i\n    }}\n    return nil\n}}",
     },
 }
 
@@ -58,18 +72,25 @@ def synthesize_algorithm(algorithm: str, lang: str = "python", name: str = "fn")
 CLASS_TEMPLATES = {
     "singleton": {
         "python": "class {name}:\n    _instance = None\n    def __new__(cls):\n        if cls._instance is None:\n            cls._instance = super().__new__(cls)\n        return cls._instance\n    def __init__(self):\n        pass",
+        "javascript": "class {name} {{\n    constructor() {{\n        if ({name}._instance) {{\n            return {name}._instance;\n        }}\n        {name}._instance = this;\n    }}\n}}",
     },
     "factory": {
         "python": "class {name}:\n    def create(self, type):\n        if type == 'a':\n            return TypeA()\n        elif type == 'b':\n            return TypeB()\n        raise ValueError('unknown type')",
+        "javascript": "class {name} {{\n    create(type) {{\n        if (type === 'a') return new TypeA();\n        if (type === 'b') return new TypeB();\n        throw new Error('unknown type');\n    }}\n}}",
     },
     "observer": {
         "python": "class {name}:\n    def __init__(self):\n        self._observers = []\n    def attach(self, observer):\n        self._observers.append(observer)\n    def notify(self, event):\n        for obs in self._observers:\n            obs.update(event)",
+        "javascript": "class {name} {{\n    constructor() {{\n        this.observers = [];\n    }}\n    attach(observer) {{\n        this.observers.push(observer);\n    }}\n    notify(event) {{\n        for (const obs of this.observers) obs.update(event);\n    }}\n}}",
     },
     "stack": {
         "python": "class {name}:\n    def __init__(self):\n        self._items = []\n    def push(self, item):\n        self._items.append(item)\n    def pop(self):\n        return self._items.pop()\n    def is_empty(self):\n        return len(self._items) == 0",
+        "javascript": "class {name} {{\n    constructor() {{\n        this.items = [];\n    }}\n    push(item) {{\n        this.items.push(item);\n    }}\n    pop() {{\n        return this.items.pop();\n    }}\n    isEmpty() {{\n        return this.items.length === 0;\n    }}\n}}",
+        "go": "type {name} struct {{\n    items []interface{{}}\n}}\n\nfunc (s *{name}) Push(item interface{{}}) {{\n    s.items = append(s.items, item)\n}}\n\nfunc (s *{name}) Pop() interface{{}} {{\n    if len(s.items) == 0 {{\n        return nil\n    }}\n    item := s.items[len(s.items)-1]\n    s.items = s.items[:len(s.items)-1]\n    return item\n}}\n\nfunc (s *{name}) IsEmpty() bool {{\n    return len(s.items) == 0\n}}",
     },
     "queue": {
         "python": "class {name}:\n    def __init__(self):\n        self._items = []\n    def enqueue(self, item):\n        self._items.append(item)\n    def dequeue(self):\n        return self._items.pop(0)\n    def is_empty(self):\n        return len(self._items) == 0",
+        "javascript": "class {name} {{\n    constructor() {{\n        this.items = [];\n    }}\n    enqueue(item) {{\n        this.items.push(item);\n    }}\n    dequeue() {{\n        return this.items.shift();\n    }}\n    isEmpty() {{\n        return this.items.length === 0;\n    }}\n}}",
+        "go": "type {name} struct {{\n    items []interface{{}}\n}}\n\nfunc (q *{name}) Enqueue(item interface{{}}) {{\n    q.items = append(q.items, item)\n}}\n\nfunc (q *{name}) Dequeue() interface{{}} {{\n    if len(q.items) == 0 {{\n        return nil\n    }}\n    item := q.items[0]\n    q.items = q.items[1:]\n    return item\n}}\n\nfunc (q *{name}) IsEmpty() bool {{\n    return len(q.items) == 0\n}}",
     },
 }
 
@@ -80,6 +101,16 @@ def synthesize_class(pattern: str, lang: str = "python", name: str = "MyClass") 
     if not tpl:
         return None
     return tpl.format(name=name)
+
+
+def list_synthesis_intents() -> Dict:
+    """Return all available synthesis intents, shapes, algorithms, and patterns with their supported languages."""
+    return {
+        "library_intents": {intent: list(tpls.keys()) for intent, tpls in LIBRARY_TEMPLATES.items()},
+        "algorithm_intents": {alg: list(tpls.keys()) for alg, tpls in ALGORITHM_TEMPLATES.items()},
+        "class_patterns": {pat: list(tpls.keys()) for pat, tpls in CLASS_TEMPLATES.items()},
+        "shapes": {s: list(tpls.keys()) for s, tpls in SHAPE_TEMPLATES.items()},
+    }
 
 # ── Library call templates per intent ───────────────────────────────────────
 # Each intent: {lang: (module, call, args_template, role)}

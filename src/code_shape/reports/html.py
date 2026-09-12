@@ -356,9 +356,25 @@ def render_html(rep: AnalysisReport) -> str:
     if rep.vulnerabilities:
         parts.append("<h2>Vulnerabilities / Security Findings</h2>")
         parts.append(f'<p><span class="badge b-bad">{len(rep.vulnerabilities)} finding(s)</span></p>')
+        vuln_rows = []
+        for v in rep.vulnerabilities:
+            fn = v.get("function") or "<module>"
+            f_path = v.get("file")
+            loc = f"{f_path}:{fn}()" if f_path and f_path != "<snippet>" else f"{fn}()"
+            sp = v.get("shape_part") or "UNKNOWN"
+            cwe = v.get("cwe")
+            t_str = f"{v.get('type', '?')} ({cwe})" if cwe else v.get("type", "?")
+            vuln_rows.append([
+                v.get("severity", "MEDIUM"),
+                t_str,
+                f'<code>{loc}</code>',
+                str(v.get("line", "?")),
+                f'<span class="badge b-warn">{sp}</span>',
+                f'<code>{v.get("path") or v.get("sink", "?")}</code>',
+            ])
         parts.append(_table(
-            ["Type", "Line", "Sink", "Source"],
-            [[v.get("type", "?"), str(v.get("line", "?")), f'<code>{v.get("sink", "?")}</code>', str(v.get("source", "?"))] for v in rep.vulnerabilities],
+            ["Severity", "Type (CWE)", "Location", "Line", "Shape Part", "Sink / Path"],
+            vuln_rows,
         ))
         # vuln type distribution doughnut
         from collections import Counter

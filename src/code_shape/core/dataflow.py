@@ -24,6 +24,7 @@ Dependency-free (stdlib only: ast, collections, dataclasses).
 from __future__ import annotations
 
 import ast
+import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -216,7 +217,8 @@ def _call_name(f: ast.AST) -> Optional[str]:
     if isinstance(f, ast.Name):
         return f.id
     if isinstance(f, ast.Attribute):
-        return f.attr
+        base = _call_name(f.value)
+        return f"{base}.{f.attr}" if base else f.attr
     return None
 
 
@@ -225,17 +227,30 @@ def project_dfg(code: str, lang: str = "python") -> ProjectDFG:
     """Build a project-level data-flow graph from source code.
 
     For Python, parses the AST and builds per-function DFGs + the call graph.
-    For other languages, falls back to a lightweight regex-based function
-    extraction (best-effort) so the graph is still populated.
+    For all other 12 languages (or Python syntax fragments), uses universal_ast
+    to extract functions, variable bindings, assignments, calls, and data edges.
     """
     proj = ProjectDFG()
-    if lang != "python":
+    lang_clean = (lang or "python").lower()
+
+    if lang_clean not in ("python", "py"):
+        try:
+            from code_shape.core.universal_ast import parse_universal_dfg
+            proj = parse_universal_dfg(code, lang_clean)
+            if proj.functions:
+                return proj
+        except Exception:
+            pass
         return _regex_project_dfg(code, proj)
 
     try:
         tree = ast.parse(code)
     except SyntaxError:
-        return proj
+        try:
+            from code_shape.core.universal_ast import parse_universal_dfg
+            return parse_universal_dfg(code, "python")
+        except Exception:
+            return proj
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -263,7 +278,7 @@ def project_dfg(code: str, lang: str = "python") -> ProjectDFG:
 
 
 def _regex_project_dfg(code: str, proj: ProjectDFG) -> ProjectDFG:
-    """Best-effort function extraction for non-Python languages."""
+    """Fallback function extraction for non-Python languages."""
     import re
     # match def/function/class methods
     for m in re.finditer(r"(?:def|function|func|fn)\s+(\w+)\s*\(([^)]*)\)", code):
@@ -606,6 +621,208 @@ def merge_project_dfg(file_dfgs: Dict[str, ProjectDFG]) -> ProjectDFG:
     merged.call_edges = list(dict.fromkeys(merged.call_edges))
     merged.data_edges = list(dict.fromkeys(merged.data_edges))
     return merged
+
+
+# ── In-to-Out Path Tracing ────────────────────────────────────────────────
+def trace_in_to_out_paths(
+    code: str, file_path: Optional[str] = None, lang: str = "python"
+) -> List[Dict[str, Any]]:
+    """Extract complete dataflow paths from input entry points to output exit points.
+
+    Traces:
+      - in: function parameters, external input reads (request, env, input)
+      - flow: intermediate variable assignments, transformations, call args
+      - out: return statements, sinks (db.execute, os.system, etc.), I/O prints
+    """
+    proj = project_dfg(code, lang)
+    paths: List[Dict[str, Any]] = []
+
+    # Map known issues in this snippet to line numbers
+    issues_by_line: Dict[int, Dict[str, Any]] = {}
+    try:
+        from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
+        for iss in find_precise_issues(code, file_path, lang) + find_buffer_overflows(code, file_path, lang):
+            l = iss.get("line")
+            if l:
+                issues_by_line[l] = iss
+    except Exception:
+        pass
+
+    for fn_name, dfg in proj.functions.items():
+        # Build adjacency list: src -> list of DataEdge
+        adj: Dict[str, List[DataEdge]] = defaultdict(list)
+        for e in dfg.edges:
+            adj[e.src].append(e)
+
+        # Identify 'in' sources for this function
+        in_sources: List[Tuple[str, int, str]] = []
+        for p in dfg.params:
+            p_line = dfg.vars[p].defined_at if p in dfg.vars else 1
+            in_sources.append((p, p_line, "param"))
+
+        # Also find local variables assigned directly from external inputs
+        for vname, vnode in dfg.vars.items():
+            if vname not in dfg.params:
+                for e in dfg.edges:
+                    if e.dst == vname and any(
+                        s in e.src.lower()
+                        for s in ("request", "req", "ctx", "environ", "argv", "input")
+                    ):
+                        in_sources.append((vname, vnode.defined_at, "external_input"))
+                        break
+
+        # If no explicit params/inputs found, use root variables (in-degree 0)
+        if not in_sources and dfg.vars:
+            targets_with_incoming = {e.dst for e in dfg.edges}
+            for vname, vnode in dfg.vars.items():
+                if vname not in targets_with_incoming:
+                    in_sources.append((vname, vnode.defined_at, "variable"))
+
+        # Trace paths from each in_source using DFS
+        for in_var, in_line, in_kind in in_sources:
+            initial_hop = {
+                "step": 0,
+                "node": in_var,
+                "line": in_line,
+                "kind": in_kind,
+                "shape_token": f"IN:{in_kind.upper()}[{in_var}]",
+            }
+            stack = [(in_var, in_line, in_kind, [initial_hop], {in_var})]
+
+            while stack:
+                curr_node, curr_line, curr_kind, curr_hops, visited = stack.pop()
+                out_edges = adj.get(curr_node, [])
+
+                if not out_edges or curr_node == "return" or curr_node.startswith("call:"):
+                    if len(curr_hops) > 1 or curr_node in ("return",) or curr_node.startswith("call:"):
+                        terminal_hop = curr_hops[-1]
+                        shape_seq = " -> ".join(h["shape_token"] for h in curr_hops)
+
+                        # Check vulnerability association
+                        is_vuln = False
+                        vuln_type = None
+                        cwe = None
+                        severity = None
+
+                        for h in curr_hops:
+                            line_match = issues_by_line.get(h["line"])
+                            if line_match:
+                                is_vuln = True
+                                vuln_type = line_match.get("type")
+                                cwe = line_match.get("cwe")
+                                severity = line_match.get("severity")
+                                break
+
+                        paths.append({
+                            "function": fn_name,
+                            "file": file_path or "<snippet>",
+                            "source": {
+                                "name": in_var,
+                                "kind": in_kind,
+                                "line": in_line,
+                            },
+                            "sink": {
+                                "name": terminal_hop["node"],
+                                "kind": terminal_hop["kind"],
+                                "line": terminal_hop["line"],
+                            },
+                            "hops": curr_hops,
+                            "shape_sequence": shape_seq,
+                            "length": len(curr_hops),
+                            "is_vulnerable": is_vuln,
+                            "vulnerability_type": vuln_type,
+                            "cwe": cwe,
+                            "severity": severity,
+                        })
+                    continue
+
+                for e in out_edges:
+                    if e.dst in visited and e.dst != "return" and not e.dst.startswith("call:"):
+                        continue
+                    if len(curr_hops) >= 15:
+                        continue
+
+                    if e.dst == "return":
+                        h_kind = "return"
+                        st = "OUT:RETURN"
+                    elif e.dst.startswith("call:"):
+                        callee = e.dst[5:]
+                        is_dangerous = any(s in callee.lower() for s in ("execute", "query", "system", "eval", "open", "read", "write", "post", "get"))
+                        h_kind = "sink" if is_dangerous else "call"
+                        st = f"OUT:{h_kind.upper()}[{callee}]"
+                    else:
+                        h_kind = "assign"
+                        st = f"FLOW:ASSIGN[{e.dst}]"
+
+                    next_hop = {
+                        "step": len(curr_hops),
+                        "node": e.dst,
+                        "line": e.line,
+                        "kind": h_kind,
+                        "shape_token": st,
+                    }
+                    stack.append((e.dst, e.line, h_kind, curr_hops + [next_hop], visited | {e.dst}))
+
+    # Fallback for non-Python or empty AST: scan lines for assignments and sinks
+    if not paths and code:
+        lines = code.splitlines()
+        param_match = re.search(r"(?:def|function|func|fn)\s+(\w+)\s*\(([^)]*)\)", code)
+        fn_name = param_match.group(1) if param_match else "<module>"
+        params = [p.strip().split(":")[0].split("=")[0].strip() for p in (param_match.group(2).split(",") if param_match else []) if p.strip()]
+        for p in params:
+            hops = [{
+                "step": 0,
+                "node": p,
+                "line": 1,
+                "kind": "param",
+                "shape_token": f"IN:PARAM[{p}]",
+            }]
+            for l_idx, line in enumerate(lines, 1):
+                if p in line and any(k in line for k in ("execute", "system", "eval", "query", "open", "return")):
+                    kind = "return" if "return" in line else "sink"
+                    hops.append({
+                        "step": len(hops),
+                        "node": line.strip()[:40],
+                        "line": l_idx,
+                        "kind": kind,
+                        "shape_token": f"OUT:{kind.upper()}",
+                    })
+                    paths.append({
+                        "function": fn_name,
+                        "file": file_path or "<snippet>",
+                        "source": {"name": p, "kind": "param", "line": 1},
+                        "sink": {"name": line.strip()[:40], "kind": kind, "line": l_idx},
+                        "hops": hops,
+                        "shape_sequence": " -> ".join(h["shape_token"] for h in hops),
+                        "length": len(hops),
+                        "is_vulnerable": kind == "sink",
+                    })
+                    break
+
+    # Deduplicate paths
+    seen_paths = set()
+    unique_paths = []
+    for p in paths:
+        pkey = (p["function"], p["source"]["name"], p["sink"]["name"], p["shape_sequence"])
+        if pkey not in seen_paths:
+            seen_paths.add(pkey)
+            unique_paths.append(p)
+
+    return unique_paths
+
+
+def format_paths_cli(paths: List[Dict[str, Any]]) -> str:
+    """Render a list of InOutPaths into human-readable CLI output."""
+    if not paths:
+        return "No in-to-out dataflow paths found."
+    out_lines = []
+    for i, p in enumerate(paths, 1):
+        vuln_badge = f" [VULN: {p['vulnerability_type']} / {p['cwe']}]" if p.get("is_vulnerable") and p.get("vulnerability_type") else ""
+        out_lines.append(f"  [PATH {i}] {p['function']}() : in:{p['source']['name']} (L{p['source']['line']}) -> out:{p['sink']['name']} (L{p['sink']['line']}){vuln_badge}")
+        out_lines.append(f"    Shape: {p['shape_sequence']}")
+        for h in p["hops"]:
+            out_lines.append(f"      Hop {h['step']} @ L{h['line']}: {h['kind']} '{h['node']}'")
+    return "\n".join(out_lines)
 
 
 # ── Self-test ─────────────────────────────────────────────────────────────

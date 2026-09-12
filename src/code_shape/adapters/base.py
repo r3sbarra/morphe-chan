@@ -42,8 +42,17 @@ class LanguageAdapter:
     def extract_functions(self, code: str) -> Dict[str, str]:
         """Extract functions AND class methods. Returns {name: body}.
 
-        Handles top-level functions and methods indented inside classes.
+        Uses universal AST extraction for exact brace/block boundaries across all languages,
+        with fallback to indentation matching for legacy or pseudo-code snippets.
         """
+        try:
+            from code_shape.core.universal_ast import extract_universal_functions
+            funcs = extract_universal_functions(code, self.name)
+            if funcs:
+                return {f.name: f.full_code for f in funcs}
+        except Exception:
+            pass
+
         functions: Dict[str, str] = {}
         lines = code.splitlines()
         current_name = None

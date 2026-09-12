@@ -39,29 +39,78 @@ def _infer_type_from_expr(expr: str) -> str:
     return "UNKNOWN"
 
 
-def _infer_types(code: str) -> Dict[str, str]:
-    """Infer variable types via assignment + USAGE analysis.
+def _map_type_hint_to_canonical(hint: str) -> Optional[str]:
+    """Map explicit language type annotations into canonical shape types."""
+    if not hint:
+        return None
+    h = hint.strip().lower()
+    if any(k in h for k in ("[]", "list", "array", "vec", "slice", "set")):
+        return "LIST"
+    if any(k in h for k in ("map", "dict", "hashmap", "dictionary", "record")):
+        return "DICT"
+    if any(k in h for k in ("string", "str", "char*", "&str", "text")):
+        return "STR"
+    if any(k in h for k in ("int", "i32", "i64", "long", "short", "usize", "size_t", "uint", "byte")):
+        return "INT"
+    if any(k in h for k in ("float", "double", "f32", "f64")):
+        return "FLOAT"
+    if any(k in h for k in ("repo", "model", "query", "entity", "orm")):
+        return "ORM"
+    return None
 
-    Params start as PARAM, then get refined by how they're used:
+
+def _infer_types(code: str, lang: Optional[str] = None) -> Dict[str, str]:
+    """Infer variable types via explicit type hints, assignment expressions, and USAGE analysis.
+
+    In typed languages (Java, Go, Rust, C/C++, TypeScript, etc.), declared parameter
+    and variable types map directly into canonical types (LIST, DICT, STR, INT, ORM).
+    Params without hints start as PARAM, then get refined by how they're used:
       - x[i] with len(x) / .append / range -> LIST
       - x[key] with .get / .keys / {} -> DICT
       - x.attr / .objects / .query -> ORM
     """
     import re
     types: Dict[str, str] = {}
-    # params: unknown (could be anything)
-    for m in re.finditer(r"(?:def|function)\s+\w+\s*\(([^)]*)\)", code):
-        for p in m.group(1).split(","):
-            p = p.strip().split(":")[0].strip().split("=")[0].strip()
-            if p:
-                types[p] = "PARAM"
-    # assignments
+
+    # 1. Parse parameters & type hints using universal AST
+    try:
+        from code_shape.core.universal_ast import extract_universal_functions
+        funcs = extract_universal_functions(code, lang or "generic")
+        for fn in funcs:
+            for p in fn.params:
+                if p.type_hint:
+                    canon = _map_type_hint_to_canonical(p.type_hint)
+                    types[p.name] = canon if canon else "PARAM"
+                elif p.name not in types:
+                    types[p.name] = "PARAM"
+    except Exception:
+        pass
+
+    # Regex fallback for parameter discovery if universal AST didn't find any
+    if not types:
+        for m in re.finditer(r"(?:def|function|func|fn|fun)\s+\w+\s*\(([^)]*)\)", code):
+            for p in m.group(1).split(","):
+                p = p.strip().split(":")[0].strip().split("=")[0].strip()
+                if p:
+                    types[p] = "PARAM"
+
+    # 2. Check explicit typed variable declarations: Type var = expr
+    for m in re.finditer(r"^[ \t]*(?:[\w<>\[\]*&]+)\s+([a-zA-Z_]\w*)\s*=\s*([^;\n]+)", code, re.MULTILINE):
+        type_str, var, expr = m.group(0).split()[0], m.group(1), m.group(2).strip()
+        canon = _map_type_hint_to_canonical(type_str)
+        if canon:
+            types[var] = canon
+
+    # 3. Infer from assignment expressions
     for m in re.finditer(r"(\w+)\s*=\s*([^;\n]+)", code):
         var, expr = m.group(1), m.group(2).strip()
-        if var in types and types[var] != "PARAM":
+        if var in types and types[var] not in ("PARAM", "UNKNOWN"):
             continue
-        types[var] = _infer_type_from_expr(expr)
-    # usage-based refinement of PARAM types
+        inferred = _infer_type_from_expr(expr)
+        if inferred != "UNKNOWN" or var not in types:
+            types[var] = inferred
+
+    # 4. Usage-based refinement of PARAM types
     for var in list(types.keys()):
         if types[var] != "PARAM":
             continue
@@ -76,7 +125,6 @@ def _infer_types(code: str) -> Dict[str, str]:
         # ORM usage: .objects/.query/.filter/.all
         elif re.search(r"\b" + re.escape(var) + r"\.(?:objects|query|filter|all|first)\b", code):
             types[var] = "ORM"
-        # NOTE: bare x[i] with no usage hint stays PARAM/UNKNOWN (genuinely ambiguous)
     return types
 
 

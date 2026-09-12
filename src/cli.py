@@ -23,17 +23,36 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from shape_analyzer import CodeShapeAnalyzer
 
 
 def _read_input(arg: str) -> str:
-    """Read code from a file if arg is a file, else treat as inline code."""
-    p = Path(arg)
-    if p.exists() and p.is_file():
-        return p.read_text(encoding="utf-8", errors="replace")
+    """Read code from a file if arg is a file path, else treat as inline code."""
+    if not arg or "\n" in arg or "\r" in arg or "\0" in arg or len(arg) > 4096:
+        return arg
+    try:
+        p = Path(arg)
+        if p.is_file():
+            return p.read_text(encoding="utf-8", errors="replace")
+    except (OSError, ValueError):
+        pass
     return arg
+
+
+def _is_file_target(arg: str) -> Optional[str]:
+    """Return file path if arg is an existing file, else None."""
+    if not arg or "\n" in arg or "\r" in arg or "\0" in arg or len(arg) > 4096:
+        return None
+    try:
+        p = Path(arg)
+        if p.is_file():
+            return str(p)
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def _add_report_flag(p):
@@ -135,6 +154,15 @@ def main():
     p.add_argument("--lang", default=None, help="language hint")
     _add_report_flag(p)
 
+    # paths
+    p = sub.add_parser("paths", help="Trace in-to-out dataflow paths through code",
+                       description="Trace complete dataflow paths from input parameters to returns and sinks with geometric shape sequences.")
+    p.add_argument("code", help="code snippet or file path")
+    p.add_argument("--lang", default=None, help="language hint")
+    p.add_argument("--fn", default=None, help="filter by function name")
+    p.add_argument("--vuln-only", action="store_true", help="only display paths reaching vulnerable sinks")
+    p.add_argument("--json", action="store_true", help="output JSON")
+
     # efficiency
     p = sub.add_parser("efficiency", help="Efficiency analysis of a code snippet",
                        description="Derive time complexity (O(1), O(n), O(n^2), ...) and efficiency signals.")
@@ -194,6 +222,10 @@ def main():
     sub.add_parser("languages", help="List supported languages",
                    description="List the 13 supported programming languages.")
 
+    # intents
+    sub.add_parser("intents", help="List supported synthesis intents, shapes, and patterns",
+                   description="List all supported intents, shapes, algorithms, and design patterns for code synthesis.")
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
@@ -249,14 +281,42 @@ def main():
 
     elif args.cmd == "vulns":
         code = _read_input(args.code)
+        target_file = _is_file_target(args.code)
         from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
-        issues = find_precise_issues(code) + find_buffer_overflows(code)
+        issues = find_precise_issues(code, file_path=target_file, lang=args.lang) + find_buffer_overflows(code, file_path=target_file, lang=args.lang)
         if issues:
             for i in issues:
-                print(f"  {i['type']}@L{i['line']} sink={i['sink']}")
+                sev = i.get("severity", "MEDIUM")
+                cwe = i.get("cwe", "CWE-???")
+                score = i.get("exploitability", {}).get("score", 0.0)
+                tags = ",".join(i.get("tags", [])[:3])
+                cves = ",".join(i.get("cve_examples", [])[:2])
+                cve_str = f" cves=[{cves}]" if cves else ""
+                fn_name = i.get("function") or "<module>"
+                loc_str = f" in {i['file']}:{fn_name}()" if i.get("file") and i["file"] != "<snippet>" else f" in {fn_name}()"
+                sp = f" shape={i['shape_part']}" if i.get("shape_part") else ""
+                print(f"  [{sev}] {i['type']} ({cwe}){loc_str} @ L{i['line']}{sp}")
+                print(f"    sink={i['sink']} (score={score:.2f}, tags={tags}{cve_str})")
+                if i.get("path"):
+                    print(f"    path: {i['path']}")
         else:
             print("no vulnerabilities detected")
         _maybe_report(args, "vulns", args.code, code=code, lang=args.lang)
+
+    elif args.cmd == "paths":
+        code = _read_input(args.code)
+        target_file = _is_file_target(args.code)
+        from code_shape.core.dataflow import trace_in_to_out_paths, format_paths_cli
+        paths = trace_in_to_out_paths(code, file_path=target_file, lang=args.lang or "python")
+        if args.fn:
+            paths = [p for p in paths if p.get("function") == args.fn]
+        if args.vuln_only:
+            paths = [p for p in paths if p.get("is_vulnerable")]
+        if args.json:
+            import json
+            print(json.dumps(paths, indent=2))
+        else:
+            print(format_paths_cli(paths))
 
     elif args.cmd == "efficiency":
         code = _read_input(args.code)
@@ -322,6 +382,22 @@ def main():
 
     elif args.cmd == "languages":
         print(", ".join(a.languages()))
+
+    elif args.cmd == "intents":
+        from code_shape.synthesis.shape_library_synth import list_synthesis_intents
+        intents_data = list_synthesis_intents()
+        print("=== Supported Synthesis Library Intents ===")
+        for intent, langs in intents_data["library_intents"].items():
+            print(f"  • {intent:15s} [{', '.join(langs)}]")
+        print("\n=== Supported Algorithm Intents ===")
+        for alg, langs in intents_data["algorithm_intents"].items():
+            print(f"  • {alg:15s} [{', '.join(langs)}]")
+        print("\n=== Supported Design Patterns / Classes ===")
+        for pat, langs in intents_data["class_patterns"].items():
+            print(f"  • {pat:15s} [{', '.join(langs)}]")
+        print("\n=== Supported Shapes ===")
+        for s, langs in intents_data["shapes"].items():
+            print(f"  • {s:28s} [{', '.join(langs)}]")
 
 
     elif args.cmd == "snapshot":
