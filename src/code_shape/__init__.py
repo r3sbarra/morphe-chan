@@ -21,8 +21,11 @@ from .core.variable_shape import (
     cascading_type_flow, merge_variable_shape, type_profile, type_profile_normalized,
 )
 
+from .chan import MorpheChan, morphe_chan
+
 __version__ = "0.1.0"
 __all__ = [
+    "MorpheChan", "morphe_chan",
     "shape", "true_shape_vector", "true_similarity", "recursive_shape",
     "get_adapter", "list_languages",
     "infer_types", "variable_shape", "variable_shape_normalized",

@@ -20,6 +20,12 @@ Thumbs.db
 # Runtime data (keep library shapes, exclude tool schemas/vault)
 data/tool_schemas/
 data/vault/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.lock
+*.db
+*.lock
 
 # Generated analysis reports (runtime output)
 /reports/

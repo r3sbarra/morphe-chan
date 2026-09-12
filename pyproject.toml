@@ -9,7 +9,7 @@ description = "Multi-dimensional geometric code analysis and synthesis: represen
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Ai", email = "ai@openclaw.local" }]
+authors = [{ name = "r3sbarra", email = "25109979+r3sbarra@users.noreply.github.com" }]
 keywords = ["code-analysis", "code-synthesis", "shape", "vector", "static-analysis", "vulnerability-detection"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -17,9 +17,22 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Quality Assurance",
 ]
+dependencies = [
+    "basic-chan @ git+https://github.com/r3sbarra/basic-chan.git",
+]
 
 [project.urls]
-Homepage = "https://github.com/richard/morphe-chan"
+Homepage = "https://github.com/r3sbarra/morphe-chan"
+Repository = "https://github.com/r3sbarra/morphe-chan"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.entry-points."basic_chan.sisters"]
+morphe-chan = "code_shape.chan:morphe_chan"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
