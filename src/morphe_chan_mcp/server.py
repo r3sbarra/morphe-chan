@@ -131,6 +131,17 @@ async def list_tools() -> list[types.Tool]:
             },
         ),
         types.Tool(
+            name="morphe_security_posture",
+            description="Scan a directory and produce a security-posture profile: aggregated risk score/grade, severity+type distribution, per-file risk ranking, and per-file remediation actions.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the project directory to scan"},
+                },
+                "required": ["path"],
+            },
+        ),
+        types.Tool(
             name="morphe_paths",
             description="Trace end-to-end dataflow paths from inputs to returns and dangerous sinks with geometric shape sequences.",
             inputSchema={
@@ -249,6 +260,13 @@ def _dispatch(name: str, args: dict[str, Any]) -> Any:
         lang = args.get("lang")
         from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
         return find_precise_issues(code, file_path=target_file, lang=lang) + find_buffer_overflows(code, file_path=target_file, lang=lang)
+    if name == "morphe_security_posture":
+        from code_shape.security.posture import scan_project, analyze, remediations
+        target = args["path"]
+        issues = scan_project(target)
+        return {"profile": analyze(issues),
+                "remediations": remediations(issues, by_file=True),
+                "total_findings": len(issues)}
     if name == "morphe_paths":
         raw = args["code"]
         target_file = raw if isinstance(raw, str) and not ("\n" in raw or len(raw) > 255) and Path(raw).is_file() else None

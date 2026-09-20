@@ -83,15 +83,54 @@ def cosine(a: Dict[str, float], b: Dict[str, float]) -> float:
 
 
 def true_similarity(code_a: str, code_b: str, lang_a: str = None, lang_b: str = None) -> float:
-    """Cosine similarity between two TRUE shape vectors."""
-    return cosine(true_shape_vector(code_a, lang_a), true_shape_vector(code_b, lang_b))
+    """Cosine similarity between two TRUE shape vectors, minus a polarity
+    penalty so semantically opposite operations (e.g. `+` vs `-`, `>` vs `<`)
+    are not scored as near-clones."""
+    counts_a = recursive_shape(code_a, lang_a)
+    counts_b = recursive_shape(code_b, lang_b)
+    vec_a = true_shape_vector(code_a, lang_a)
+    vec_b = true_shape_vector(code_b, lang_b)
+    base = cosine(vec_a, vec_b)
+    from .polarity import combined_similarity_penalty
+    return combined_similarity_penalty(base, dict(counts_a), dict(counts_b), code_a, code_b)
 
 
-def shape(code: str, lang: str = None) -> str:
-    """Human-readable shape = dominant primitives."""
+def primitive_similarity(code_a: str, code_b: str, lang_a: str = None,
+                        lang_b: str = None) -> float:
+    """Cosine similarity over the PRIM:* enriched subspace only.
+
+    Self-derived (see research/SELF_DERIVATION_2026-09-20.md): the PRIM:* dims are
+    the language-invariant, clone-sensitive core of Morphe-chan's enriched shape.
+    This is the most compact shape-native similarity — same logical function
+    written in different languages (or with renamed variables) scores ~1.0, and
+    genuinely different functions stay separated. It does NOT apply the polarity
+    penalty (use `true_similarity` for polarity-aware scoring); benchmark showed
+    it is the best enriched-derived clone signal (71% vs structural 83%).
+    """
+    from .enriched_shape import enriched_shape
+
+    def _pv(code, lang):
+        s = enriched_shape(code, lang)
+        return {k: v for k, v in s.items()
+                if k.startswith("PRIM:") and v not in (0, 0.0)}
+    pa, pb = _pv(code_a, lang_a), _pv(code_b, lang_b)
+    keys = set(pa) | set(pb)
+    dot = sum(pa.get(k, 0.0) * pb.get(k, 0.0) for k in keys)
+    na = math.sqrt(sum(x * x for x in pa.values()))
+    nb = math.sqrt(sum(x * x for x in pb.values()))
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+
+def shape(code: str, lang: str = None, top_n: int = 8) -> str:
+    """Human-readable shape = dominant primitives (top `top_n` non-zero).
+
+    Widened to 8 (was 5) for composite fidelity (self-derived).
+    """
     counts = recursive_shape(code, lang)
     ranked = sorted(counts.items(), key=lambda kv: -kv[1])
-    top = [p for p, c in ranked if c > 0][:5]
+    top = [p for p, c in ranked if c > 0][:top_n]
     return ">".join(top) if top else "EMPTY"
 
 

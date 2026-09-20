@@ -26,6 +26,12 @@ class LanguageAdapter:
     loop_patterns = [r"\bfor\b", r"\bwhile\b"]
     branch_patterns = [r"\bif\b", r"\belse\b"]
     return_patterns = [r"\breturn\b"]
+    # Implicit/tail-expression returns for languages that use them (Ruby:
+    # last expression of a def; Rust: tail expression with no semicolon).
+    # Each is a list of (regex, description). Detects a function whose body
+    # ends in an expression rather than an explicit `return`. Empty by default;
+    # subclasses opt in.
+    tail_return_patterns = []
     read_patterns = [r"\binput\(", r"\bopen\(", r"\bread\("]
     write_patterns = [r"\bprint\("]
     assign_patterns = [r"=", r"\+= ", r"-= "]
@@ -97,7 +103,9 @@ class LanguageAdapter:
 
         String literals and comments are stripped first so keywords inside
         them (e.g. "for sale", "if needed") don't count as primitives.
-        """
+        The RAW code is kept for lexer-aware arithmetic so `//` floor division
+        isn't mistaken for a comment."""
+        raw = code
         code = self._strip_strings_comments(code)
         counts: Dict[str, int] = {p: 0 for p in PRIMITIVES}
         for pat in self.loop_patterns:
@@ -105,6 +113,9 @@ class LanguageAdapter:
         for pat in self.branch_patterns:
             counts["BRANCH"] += len(re.findall(pat, code))
         for pat in self.return_patterns:
+            counts["RETURN"] += len(re.findall(pat, code))
+        for pat in self.tail_return_patterns:
+            # tail-implicit returns: count each match as one RETURN primitive
             counts["RETURN"] += len(re.findall(pat, code))
         for pat in self.read_patterns:
             counts["READ"] += len(re.findall(pat, code))
@@ -123,20 +134,56 @@ class LanguageAdapter:
         for pat in self.state_patterns:
             counts["STATE"] += len(re.findall(pat, code))
         # universal operators
-        for dim, pat in [("ARITH_ADD", r" \+ "), ("ARITH_SUB", r" - "),
-                         ("ARITH_MUL", r" \* "), ("ARITH_DIV", r" / "),
-                         ("ARITH_MOD", r" % ")]:
-            counts[dim] += len(re.findall(pat, code))
+        # Arithmetic is count by TOKEN, not spaced-regex, so compact operators
+        # (`lo+hi`, `a*b`) count too and `+` inside a string literal (already
+        # stripped) never does. This fixes cross-language shape divergence where
+        # a spaced-operator regex only fired for the language that used spaces.
+        try:
+            from code_shape.core.agnostic_shape import _tokenize
+            toks = _tokenize(raw)
+        except Exception:
+            toks = []
+        # operand tokens that can border a binary operator (identifiers, numbers,
+        # closing brackets). `*p` (pointer deref) and `* 5` (unary) are NOT
+        # multiplication, so a `*` only counts as ARITH_MUL when it has an
+        # operand-like token on BOTH sides.
+        import re as _re
+        _KEYWORDS = {"return", "if", "else", "for", "while", "in", "and", "or",
+                     "not", "int", "float", "char", "void", "true", "false",
+                     "null", "None", "self", "this", "func", "def", "fn", "let",
+                     "var", "const", "new", "sizeof", "static", "public", "switch"}
+
+        def _operand(tok):
+            if not tok or tok in _KEYWORDS:
+                return False
+            return bool(_re.fullmatch(
+                r"[A-Za-z_][A-Za-z0-9_]*|\d+|[)\]}]", tok))
+        for i, t in enumerate(toks):
+            if t == "+":
+                counts["ARITH_ADD"] += 1
+            elif t == "-":
+                counts["ARITH_SUB"] += 1
+            elif t == "*":
+                if i > 0 and i + 1 < len(toks) and _operand(toks[i - 1]) and _operand(toks[i + 1]):
+                    counts["ARITH_MUL"] += 1
+            elif t == "/" or t == "//":
+                if i > 0 and i + 1 < len(toks) and _operand(toks[i - 1]) and _operand(toks[i + 1]):
+                    counts["ARITH_DIV"] += 1
+            elif t == "%":
+                if i > 0 and i + 1 < len(toks) and _operand(toks[i - 1]) and _operand(toks[i + 1]):
+                    counts["ARITH_MOD"] += 1
+            elif t in ("+=", "-=", "*=", "/=", "%=", "++", "--"):
+                counts["ARITH_ADD" if t in ("+=", "++") else
+                        "ARITH_SUB" if t in ("-=", "--") else
+                        "ARITH_MUL" if t == "*=" else
+                        "ARITH_DIV" if t == "/=" else "ARITH_MOD"] += 1
+        # '*' is NOT multiplication in SELECT * FROM / wildcard imports / generics.
+        non_mul = len(_re.findall(r"SELECT\s+\*\s+FROM", code, _re.IGNORECASE))
+        counts["ARITH_MUL"] = max(0, counts["ARITH_MUL"] - non_mul)
         for dim, pat in [("COMPARE_EQ", r"==|==="), ("COMPARE_NE", r"!=|!=="),
                          ("COMPARE_GT", r" > "), ("COMPARE_LT", r" < "),
                          ("COMPARE_GE", r">="), ("COMPARE_LE", r"<=")]:
             counts[dim] += len(re.findall(pat, code))
-        # '*' is NOT multiplication in: SELECT * FROM (has spaces around *).
-        # The base ARITH_MUL pattern (space-star-space) already excludes *ptr (no
-        # space after *), a*b (no spaces), import java.util.* (no space before *),
-        # and List<*> (no spaces). Only SELECT * FROM matches space-star-space.
-        non_mul = len(re.findall(r"SELECT\s+\*\s+FROM", code, re.IGNORECASE))
-        counts["ARITH_MUL"] = max(0, counts["ARITH_MUL"] - non_mul)
         # recursion
         if self._is_recursive(code):
             counts["RECURSE"] += 1

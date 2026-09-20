@@ -1,0 +1,5 @@
+{
+  "corpus": "real local codebase proxies in /tmp/shape-projects",
+  "note": "flask=morphe-chan src, requests=falsci, redis=karyon-chans, express=services-hub",
+  "table": "=== Higher-order dimensions per project ===\nproj          risk_adj maint_risk sec_debt fragility  overall\nflask           17.337      309.0   117.07     1.000   18.986\nredis            3.860      224.0    15.30     1.000    4.317\nrequests         0.578      187.0     0.00     1.000    1.289\nexpress          0.041        0.5     0.00     0.010    0.366\n"
+}

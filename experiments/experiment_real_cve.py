@@ -10,32 +10,30 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "experiments"))
 
-from code_shape.security.security_detector_v2 import detect_vulns_v2
+from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
 from code_shape.security.exploitability import exploitability_score
 from real_cve_corpus import REAL_CVES
 
 
 def main():
-    print("=== Real-World CVE Detection Test ===")
-    print(f"{'CVE':14s} {'name':22s} {'detected':10s} {'expected':14s} {'OK':>3s} {'exploit':>8s}")
+    print("=== Real-World CVE Detection Test (LIVE pipeline) ===")
+    print(f"{'CVE':14s} {'name':26s} {'detected':22s} {'expected':18s} {'OK':>3s} {'exploit':>8s}")
     correct_type = 0
     correct_source = 0
     for cve, name, code, exp_type, exp_source in REAL_CVES:
-        vulns = detect_vulns_v2(code)
-        detected_types = [v["type"] for v in vulns]
-        # check correct type detected
+        # LIVE authoritative pipeline (precise_issues + buffer_overflows) —
+        # NOT the deprecated detect_vulns_v2 which misses CVE sink patterns.
+        vulns = find_precise_issues(code) + find_buffer_overflows(code)
+        detected_types = [v.get("type") for v in vulns]
         type_ok = exp_type in detected_types
         correct_type += type_ok
-        # check correct source: verify the source is a TAINTED variable that
-        # actually flows to the sink (not just a substring present in code)
         source_ok = _source_is_tainted(code, exp_source)
         correct_source += source_ok
-        # exploitability of the expected vuln
         exp = exploitability_score(code, exp_type)
-        print(f"{cve:14s} {name:22s} {str(detected_types):10s} {exp_type:14s} "
+        print(f"{cve:14s} {name:26s} {str(detected_types):22s} {exp_type:18s} "
               f"{'OK' if type_ok else 'XX':>3s} {exp['score']:>8.2f}")
 
-    print(f"\n=== Summary ===")
+    print(f"\n=== Summary (LIVE pipeline) ===")
     print(f"Correct vulnerability type: {correct_type}/{len(REAL_CVES)}")
     print(f"Correct source (tainted, flows to sink): {correct_source}/{len(REAL_CVES)}")
 

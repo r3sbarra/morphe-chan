@@ -54,6 +54,14 @@ sim = true_similarity(
     "def total(nums):\n    acc = 0\n    for v in nums:\n        acc += v\n    return acc",
 )
 print(sim)  # ~0.9
+
+# Cross-language / cross-rename clone similarity via the PRIM:* core
+from code_shape import primitive_similarity
+x = primitive_similarity(
+    "def add(a, b): return a + b",
+    "fn add(a: i32, b: i32) -> i32 { a + b }", "python", "rust",
+)
+print(x)  # ~1.0 (same logical fn, rename- + language-invariant)
 ```
 
 ## CLI
@@ -71,6 +79,7 @@ morphe-chan patterns <code-or-file> [--lang LANG] [--report]
 morphe-chan vulns <code-or-file> [--lang LANG] [--report]
 morphe-chan efficiency <code-or-file> [--lang LANG] [--report]
 morphe-chan project <dir> [--report]
+morphe-chan anomalies <dir> [--lang LANG] [--k 2.0] [--limit 12]
 morphe-chan imports <dir> [--file FILE]
 morphe-chan compare <file-a> <file-b> [--report]
 morphe-chan report <dir> [--format text|json|html|md]

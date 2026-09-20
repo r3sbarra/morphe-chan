@@ -62,14 +62,23 @@ def _lang_of(fn: str) -> str:
 
 
 def extract_imports(code: str, lang: str) -> List[str]:
-    """Extract imported modules from code."""
+    """Extract imported modules from code.
+
+    Handles block-style imports (Go `import ( ... )`, and multi-module lines)
+    which the raw line patterns would otherwise capture as ONE broken string
+    (e.g. Go block -> '"fmt"\n "os"')."""
     imports = []
     patterns = IMPORT_PATTERNS.get(lang, [])
     for pat in patterns:
         for m in re.finditer(pat, code, re.MULTILINE):
-            mod = m.group(1).strip()
-            if mod and mod not in imports:
-                imports.append(mod)
+            groups = [g for g in m.groups() if g is not None]
+            captured = groups[0] if groups else ""
+            # Split a block/group capture into individual module tokens.
+            # Handles Go `import ( "fmt" "os" )` and C# using(...) blocks.
+            for raw in re.findall(r"[\w.\\/:@-]+", captured):
+                mod = raw.strip()
+                if mod and mod not in imports:
+                    imports.append(mod)
     return imports
 
 

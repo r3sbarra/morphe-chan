@@ -220,6 +220,56 @@ VULN_TAXONOMY: Dict[str, Dict[str, Any]] = {
         "tags": ["idor", "authorization", "access-control", "owasp:a01:2021", "cwe:639"],
         "description": "Direct access to objects or records using user-supplied IDs without verifying ownership or authorization.",
     },
+    "FAILING_OPEN": {
+        "cwe": "CWE-636",
+        "cwe_title": "Not Failing Securely (Failing Open)",
+        "owasp": "A10:2025-Mishandling of Exceptional Conditions",
+        "severity": "CRITICAL",
+        "impact": "authorization-bypass",
+        "cve_examples": [],
+        "tags": ["error-handling", "fail-open", "authz", "owasp:a10:2025", "cwe:636"],
+        "description": "On an exceptional condition the app defaults to an insecure state (grants access/returns success) instead of denying — fails OPEN.",
+    },
+    "SWALLOWED": {
+        "cwe": "CWE-390",
+        "cwe_title": "Detection of Error Condition Without Action",
+        "owasp": "A10:2025-Mishandling of Exceptional Conditions",
+        "severity": "MEDIUM",
+        "impact": "logic-error",
+        "cve_examples": [],
+        "tags": ["error-handling", "swallowed-exception", "owasp:a10:2025", "cwe:390"],
+        "description": "An exception is caught but no recovery action is taken; the caller proceeds as if the operation succeeded.",
+    },
+    "NULL_DEREF": {
+        "cwe": "CWE-476",
+        "cwe_title": "NULL Pointer Dereference",
+        "owasp": "A10:2025-Mishandling of Exceptional Conditions",
+        "severity": "MEDIUM",
+        "impact": "crash-dos",
+        "cve_examples": ["CVE-2007-5000"],
+        "tags": ["error-handling", "null-deref", "owasp:a10:2025", "cwe:476"],
+        "description": "Dereferencing the result of a fallible call (e.g. .first()/.find()) without checking for None / not-found.",
+    },
+    "ERROR_LEAK": {
+        "cwe": "CWE-209",
+        "cwe_title": "Generation of Error Message Containing Sensitive Information",
+        "owasp": "A10:2025-Mishandling of Exceptional Conditions",
+        "severity": "HIGH",
+        "impact": "information-disclosure",
+        "cve_examples": ["CVE-2019-5418", "CVE-2017-12149"],
+        "tags": ["error-handling", "info-leak", "owasp:a10:2025", "cwe:209"],
+        "description": "An error/exception message includes sensitive data (passwords, tokens, secrets, raw SQL, stack traces).",
+    },
+    "MISSING_PARAM": {
+        "cwe": "CWE-234",
+        "cwe_title": "Failure to Handle Missing Parameter",
+        "owasp": "A10:2025-Mishandling of Exceptional Conditions",
+        "severity": "LOW",
+        "impact": "logic-error",
+        "cve_examples": [],
+        "tags": ["error-handling", "missing-param", "owasp:a10:2025", "cwe:234"],
+        "description": "Accessing a user-supplied dict/request key without first checking it is present (KeyError / missing-param logic error).",
+    },
 }
 
 # Fallback taxonomy for unmapped types
@@ -232,6 +282,38 @@ DEFAULT_TAXONOMY: Dict[str, Any] = {
     "cve_examples": [],
     "tags": ["general-weakness"],
     "description": "Potential security vulnerability detected during code analysis.",
+}
+
+# Concrete, actionable remediation guidance per vulnerability type. Surfaced on
+# each enriched finding (a way to USE the findings: not just flag, but fix).
+REMEDIATION_GUIDE: Dict[str, str] = {
+    "SQL_INJECTION": "Use parameterized queries / prepared statements (e.g. db.execute('... WHERE id = ?', (uid,))) or an ORM. Never concatenate/interpolate untrusted input into SQL.",
+    "CMD_INJECTION": "Avoid shell invocation with untrusted input. Use argument lists (subprocess.run([cmd, arg])) instead of shell=True/string, or shlex.quote; prefer safer APIs and an allowlist.",
+    "EVAL_USE": "Remove eval()/exec()/compile() of untrusted input. Use a safe parser/domain logic or an allowlisted interpreter; never eval request data.",
+    "OGNL_INJECTION": "Do not evaluate user input as OGNL/expression-language. Use a parameter-safe templating engine and block arbitrary property access.",
+    "JNDI_INJECTION": "Disable remote JNDI/class loading (e.g. com.sun.jndi.rmi.object.trustURLCodebase=false), allowlist LDAP servers, upgrade Log4j to >=2.17.0.",
+    "TEMPLATE_INJECTION": "Do not render untrusted input through template engines (render_template_string). Use static templates + a sandboxed/autoescaped engine; never pass user data as template source.",
+    "XSS": "Encode/escape all output for the context (text/attribute/JS). Use textContent not innerHTML, add a CSP header, and sanitize HTML.",
+    "PATH_TRAVERSAL": "Validate/normalize user paths against an allowlist base (os.path.realpath + check prefix), reject .. and absolute paths; never concatenate input into file paths.",
+    "SSRF": "Restrict outbound requests to an allowlist of hosts/ports, block private/link-local IP ranges, and validate the URL scheme; never pass raw user URLs to fetch/requests/urlopen.",
+    "XXE": "Disable external entity resolution (e.g. disallow-doctype-decl, resolve_entities=False); do not pass user-controlled XML to XXE-enabled parsers.",
+    "LDAP_INJECTION": "Escape LDAP special chars or use encoded filter APIs; never embed user input directly in LDAP search/bind filters.",
+    "DESERIALIZATION": "Never deserialize untrusted input. Use safe formats (JSON with schema validation) and an allowlist/checksum for pickle/yaml.",
+    "HARDCODED_CRED": "Move secrets to a secrets manager / env vars; rotate any leaked credential and revoke API keys; never hardcode passwords or tokens.",
+    "WEAK_HASH": "Replace MD5/SHA1 with a strong password hash (argon2/bcrypt/scrypt/PBKDF2); never use MD5/SHA1 for security.",
+    "INSECURE_RANDOM": "Use a cryptographically secure RNG (secrets / System.Security.Cryptography) for tokens, salts, and security-sensitive values.",
+    "HEADER_INJECTION": "Validate/encode header values and reject CR/LF; use framework response helpers that forbid header injection.",
+    "LOG_INJECTION": "Log structured fields and encode/escape user-controlled values (CR/LF, brackets); never log raw untrusted input.",
+    "OPEN_REDIRECT": "Validate redirect destinations against an allowlist (is_safe_url) and only redirect to relative/known hosts, never raw user URLs.",
+    "CSRF": "Add CSRF tokens to state-changing requests, validate Origin/Referer, and use SameSite cookies.",
+    "IDOR": "Enforce object-level authorization: verify the current user owns / is permitted to access the requested resource id, not just the id param.",
+    "BUFFER_OVERFLOW": "Validate array index bounds before access (0 <= i < len) and avoid unchecked variable-length indexing; use safe containers.",
+    "ERROR_LEAK": "Return generic error messages to clients; log full details server-side only; redact secrets/SQL/stack traces from responses.",
+    "NULL_DEREF": "Check for None/not-found before dereferencing fallible calls (.first()/.find()/.get()); use optionals/defaults.",
+    "SWALLOWED": "Handle exceptions explicitly (log + recover) instead of silently swallowing; propagate or record the failure.",
+    "FAILING_OPEN": "On auth/validation failure, fail closed (deny) and log; never grant access on exception or missing check.",
+    "MISSING_PARAM": "Check that required user-supplied keys/params are present before use; validate types and ranges.",
+    "JNDI_LOOKUP": "See JNDI_INJECTION: disable remote codebase loading and upgrade vulnerable libraries.",
 }
 
 
@@ -252,6 +334,8 @@ def enrich_vulnerability(vuln: Dict[str, Any], code: Optional[str] = None) -> Di
     enriched["owasp"] = tax["owasp"]
     enriched["description"] = tax.get("description", "")
     enriched["cve_examples"] = list(tax["cve_examples"])
+    enriched["remediation"] = REMEDIATION_GUIDE.get(
+        vtype.upper(), "Review this code path: untrusted data should be validated, parameterized, and encoded for its context.")
     
     # Combined tags: base taxonomy tags + contextual tags
     tags = set(tax["tags"])

@@ -18,7 +18,7 @@ Dependency-free (stdlib only).
 """
 import math
 import re
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 # ── Input sources ──────────────────────────────────────────────────────────
 INPUT_SOURCES = {
@@ -106,6 +106,70 @@ def _propagate_taint(code: str, params: Set[str]) -> Dict[str, Set[str]]:
     return taint
 
 
+def _assignments_ordered(code: str) -> List[tuple]:
+    """Assignments in source order: [(var, rhs, line_no)]."""
+    out = []
+    for i, line in enumerate(code.splitlines(), 1):
+        m = re.match(r"\s*(\w+)\s*=\s*(.+)$", line)
+        if m and not m.group(2).startswith(("=", "==", "!=", "<=", ">=")):
+            out.append((m.group(1), m.group(2).strip(), i))
+    return out
+
+
+def trace_taint_path(code: str, sink_line_expr: str,
+                     params: Optional[Set[str]] = None) -> List[str]:
+    """Reconstruct the FULL source->...->sink data-flow path (Route Sixty-Sink style).
+
+    Returns an ordered list of hops, e.g.
+        ["PARAM:user_input", "payload", "query", "cursor.execute(...)"]
+    where each intermediate variable is a real assignment the tainted value
+    passes through before reaching the sink expression. Falls back to a
+    2-hop [source, sink] if no intermediate assignments exist.
+    """
+    if params is None:
+        params = _extract_params(code)
+    taint = _propagate_taint(code, params)
+    assigns = _assignments_ordered(code)
+
+    # Which tainted variable(s) feed the sink expression?
+    feed_vars = [var for var in taint if re.search(r"\b" + re.escape(var) + r"\b", sink_line_expr)]
+    if not feed_vars:
+        # Direct source in the sink line itself.
+        for src_name in ("REQUEST", "PARAM", "CONSTANT"):
+            if re.search(INPUT_SOURCES[src_name], sink_line_expr, re.IGNORECASE):
+                return [src_name, sink_line_expr.strip()[:40]]
+        return [sink_line_expr.strip()[:40]]
+
+    # For the first feeding var, walk backward through assignments to build
+    # the ordered chain from a source down to the var.
+    sink_var = feed_vars[0]
+    var_sources = taint.get(sink_var, set())
+    src_kind = ",".join(sorted(var_sources)) if var_sources else "UNKNOWN"
+
+    # Build an ordered prefix: sources -> intermediate vars -> sink_var
+    chain = []
+    seen = set()
+    for var, rhs, _ln in assigns:
+        if var in seen:
+            continue
+        if var == sink_var:
+            break
+        # Is this var on the taint path? (It must eventually feed sink_var.)
+        if re.search(r"\b" + re.escape(var) + r"\b", sink_line_expr) or \
+           any(re.search(r"\b" + re.escape(var) + r"\b", r2) for _v, r2, _l in assigns):
+            # Only include vars actually referenced by later path vars.
+            if any(re.search(r"\b" + re.escape(var) + r"\b", r3)
+                   for v2, r3, _l2 in assigns if v2 != var):
+                chain.append(var)
+                seen.add(var)
+    path = [src_kind] + chain + [sink_var, sink_line_expr.strip()[:40]]
+    # Trim trailing empties / collapse duplicates at the front.
+    path = [p for p in path if p]
+    if len(path) >= 3 and path[0] == path[1]:
+        path.pop(1)
+    return path
+
+
 def _output_vars(code: str, taint: Dict[str, Set[str]]) -> List[Tuple[str, Set[str]]]:
     """Find output expressions and which tainted vars feed them."""
     outputs = []
@@ -124,6 +188,72 @@ def _output_vars(code: str, taint: Dict[str, Set[str]]) -> List[Tuple[str, Set[s
                 srcs |= tsrc
         outputs.append(("PRINT", expr, srcs))
     return outputs
+
+
+def _flow_dims(code: str) -> Dict[str, int]:
+    """Lexer-aware transform detection.
+
+    Strings and comments are stripped so a literal `+`/`*` inside a string
+    never counts as arithmetic. Arithmetic counts distinct operator tokens
+    so `a=b+c` (no spaces) still fires. String-method transforms
+    (.strip/.upper/.lower/.replace/...) are captured as STRING_TRANSFORM.
+    """
+    from code_shape.core.agnostic_shape import _tokenize, _strip_strings_and_comments
+    stripped = _strip_strings_and_comments(code)
+    toks = _tokenize(code)
+    flow: Dict[str, int] = {}
+
+    def bump(op: str, by: int = 1) -> None:
+        flow[op] = flow.get(op, 0) + by
+
+    arith_ops = ("+", "-", "*", "/", "%")
+    for t in toks:
+        if t in arith_ops:
+            bump("ARITH")
+        elif t in ("+=", "-=", "*=", "/=", "%="):
+            bump("ARITH")
+    # concatenation: str-join / format / adjacent `+` on strings (approx)
+    for i, t in enumerate(toks):
+        if t == "join" and (i == 0 or toks[i - 1] == "."):
+            bump("CONCAT")
+        elif t == "format":
+            bump("CONCAT")
+    # casts
+    for t in toks:
+        if t in ("int", "str", "float", "bool", "complex", "Number", "parseInt", "parseFloat", "toString"):
+            bump("CAST")
+    # aggregate / filter / sort / search / map / reduce
+    for t in toks:
+        if t in ("sum", "count", "reduce", "len", "min", "max"):
+            bump("AGGREGATE")
+        elif t in ("filter", "where"):
+            bump("FILTER")
+        elif t in ("sort", "sorted", "orderBy"):
+            bump("SORT")
+        elif t in ("find", "index", "contains", "includes", "search", "indexOf"):
+            bump("SEARCH")
+        elif t == "map":
+            bump("MAP")
+        elif t == "reduce":
+            bump("REDUCE")
+    # string-method transforms (on a receiver) + slicing/substring
+    string_methods = {"upper", "lower", "strip", "lstrip", "rstrip", "replace",
+                      "split", "join", "capitalize", "casefold", "substring",
+                      "replaceAll", "trim", "padStart", "padEnd", "title"}
+    for i, t in enumerate(toks):
+        if t == "split" and (i == 0 or toks[i - 1] == "."):
+            bump("SPLIT")
+        elif t in ("substring", "slice") and (i == 0 or toks[i - 1] == "."):
+            bump("SLICE")
+        elif t in string_methods:
+            bump("STRING_TRANSFORM")
+    # simple list/string slice `a[1:3]` on stripped source
+    if re.search(r"\[[^\]]*:[^\]]*\]", stripped):
+        bump("SLICE")
+    # list/dict comprehension `[x for ... if ...]` is a filter
+    if re.search(r"\[.*\bfor\b.*\bif\b", stripped):
+        bump("FILTER")
+    return flow
 
 
 def value_flow_shape(code: str) -> Dict[str, float]:
@@ -147,11 +277,13 @@ def value_flow_shape(code: str) -> Dict[str, float]:
         elif re.search(pat, code):
             vec[f"IN:{src_name}"] = 1.0
 
-    # FLOW dims (transforms)
-    for op, pat in TRANSFORMS.items():
-        n = len(re.findall(pat, code))
-        if n:
-            vec[f"FLOW:{op}"] = float(n)
+    # FLOW dims (transforms) — lexer-aware: strings/comments stripped so a
+    # spaced-operator regex never matches literal `+`/`*`, compact `a=b+c`
+    # (no spaces) still counts as arithmetic, and common string-method
+    # transforms (.strip/.upper/.lower/...) are captured.
+    flow = _flow_dims(code)
+    for op, n in flow.items():
+        vec[f"FLOW:{op}"] = vec.get(f"FLOW:{op}", 0) + n
 
     # OUT dims
     for sink, pat in OUTPUT_SINKS.items():

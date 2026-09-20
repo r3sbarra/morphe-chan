@@ -15,6 +15,13 @@ class RubyAdapter(LanguageAdapter):
     def detect(self, code):
         return "def " in code or "puts " in code or "require " in code or "do |" in code
 
+    # Ruby implicitly returns the last evaluated expression in a def...end.
+    # A def whose final non-blank body line is a bare expression (not
+    # return/puts/print/assignment-only) is a tail-return method.
+    tail_return_patterns = [
+        r"def\s+\w+[^\n]*\n(?:(?![ \t]*end\b).*\n)*?[ \t]*(?![ \t]*(?:return|puts|print|raise)\b)\S+[^\n]*\n[ \t]*end\b",
+    ]
+
     def extract_calls(self, body):
         body_no_def = "\n".join(l for l in body.splitlines()
                                 if not re.match(r"^\s*def\b", l))

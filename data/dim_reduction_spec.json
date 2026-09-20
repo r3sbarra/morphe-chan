@@ -1,0 +1,221 @@
+{
+  "kept_dims": [
+    "PRIM:RECURSE",
+    "PRIM:ARITH_ADD",
+    "PRIM:ARITH_SUB",
+    "PRIM:ARITH_MUL",
+    "PRIM:ARITH_DIV",
+    "PRIM:COMPARE_EQ",
+    "PRIM:ASSIGN",
+    "PRIM:RETURN",
+    "PRIM:READ",
+    "PRIM:WRITE",
+    "PRIM:AGGREGATE",
+    "EFF:EFF_COMPLEXITY",
+    "EFF:EFF_METHOD_CALLS",
+    "EFF:EFF_ALLOC",
+    "EFF:EFF_RECURSION",
+    "FLOW:ARITH",
+    "IN:PARAM",
+    "IN:CONSTANT",
+    "OUT:RETURN",
+    "VAL:FLOW_DEPTH",
+    "VAL:COUPLING",
+    "VAL:SEVERITY",
+    "PROP:NUM",
+    "PROP:LIST",
+    "PROP:DICT",
+    "PROP:TRANSFORM",
+    "PROP:BRANCHES",
+    "PROP:LOOPS",
+    "PROP:HANDLES_ERRORS",
+    "PROP:INPUTS",
+    "PROP:OUTPUTS",
+    "PROP:IO",
+    "GRAPH:FUNCTIONS",
+    "GRAPH:CALLS",
+    "GRAPH:AVG_VARS",
+    "GRAPH:AVG_EDGES",
+    "GRAPH:COMPLEXITY",
+    "GRAPH:LOOPS",
+    "TAINT:PARAM",
+    "VAR_COUNT",
+    "TYPE_DIVERSITY",
+    "UNTYPED",
+    "MUTATION",
+    "PARAM\uf8fftype:NUM",
+    "PARAM\uf8fftype:STR",
+    "PARAM\uf8fftype:LIST",
+    "PARAM\uf8fftype:DICT",
+    "PARAM\uf8fftype:UNKNOWN",
+    "VAR\uf8fftype:NUM",
+    "VAR\uf8fftype:STR",
+    "VAR\uf8fftype:LIST",
+    "VAR\uf8fftype:UNKNOWN"
+  ],
+  "n_kept": 52,
+  "n_nominal": 92,
+  "threshold": 0.9,
+  "dropped_detail": [
+    {
+      "dim": "PRIM:ARITH_MOD",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:COMPARE_NE",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:COMPARE_GT",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:COMPARE_LT",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:COMPARE_GE",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:COMPARE_LE",
+      "reason": "redundant-with PRIM:ARITH_SUB r=0.96"
+    },
+    {
+      "dim": "PRIM:FILTER",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:SORT",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:LOOP",
+      "reason": "redundant-with PRIM:SEARCH r=0.99"
+    },
+    {
+      "dim": "EFF:EFF_LOOPS",
+      "reason": "redundant-with EFF:EFF_NESTING r=0.99"
+    },
+    {
+      "dim": "EFF:EFF_THREADED",
+      "reason": "constant"
+    },
+    {
+      "dim": "PRIM:STATE",
+      "reason": "redundant-with EFF:EFF_REPEATED r=0.91"
+    },
+    {
+      "dim": "PRIM:BRANCH",
+      "reason": "redundant-with VAL:BRANCHING r=0.99"
+    },
+    {
+      "dim": "VAL:RISK",
+      "reason": "redundant-with VAL:SEVERITY r=1.00"
+    },
+    {
+      "dim": "EFF:EFF_REPEATED",
+      "reason": "redundant-with PROP:MUTABLE r=0.97"
+    },
+    {
+      "dim": "VAL:BRANCHING",
+      "reason": "redundant-with PROP:BRANCHES r=0.99"
+    },
+    {
+      "dim": "PROP:SIDE_EFFECTS",
+      "reason": "redundant-with PRIM:WRITE r=1.00"
+    },
+    {
+      "dim": "GRAPH:DATA_EDGES",
+      "reason": "redundant-with GRAPH:CALLS r=1.00"
+    },
+    {
+      "dim": "GRAPH:MAX_FANOUT",
+      "reason": "redundant-with GRAPH:CALLS r=1.00"
+    },
+    {
+      "dim": "GRAPH:MAX_FANIN",
+      "reason": "redundant-with GRAPH:CALLS r=1.00"
+    },
+    {
+      "dim": "PRIM:SEARCH",
+      "reason": "redundant-with GRAPH:COMPLEXITY r=0.91"
+    },
+    {
+      "dim": "GRAPH:BRANCHES",
+      "reason": "redundant-with PROP:BRANCHES r=0.99"
+    },
+    {
+      "dim": "EFF:EFF_NESTING",
+      "reason": "redundant-with GRAPH:LOOPS r=0.94"
+    },
+    {
+      "dim": "GRAPH:RECURSION",
+      "reason": "redundant-with GRAPH:CALLS r=1.00"
+    },
+    {
+      "dim": "GRAPH:CYCLES",
+      "reason": "redundant-with GRAPH:CALLS r=1.00"
+    },
+    {
+      "dim": "PARAM_COUNT",
+      "reason": "redundant-with PROP:INPUTS r=1.00"
+    },
+    {
+      "dim": "PARAM\uf8fftype:CALLABLE",
+      "reason": "constant"
+    },
+    {
+      "dim": "PARAM\uf8fftype:BOOL",
+      "reason": "constant"
+    },
+    {
+      "dim": "PARAM\uf8fftype:MIXED",
+      "reason": "constant"
+    },
+    {
+      "dim": "PARAM\uf8ffrole:IN",
+      "reason": "redundant-with PROP:INPUTS r=1.00"
+    },
+    {
+      "dim": "PARAM\uf8ffrole:OUT",
+      "reason": "constant"
+    },
+    {
+      "dim": "PARAM\uf8ffrole:INOUT",
+      "reason": "constant"
+    },
+    {
+      "dim": "PROP:MUTABLE",
+      "reason": "redundant-with VAR\uf8fftype:LIST r=0.96"
+    },
+    {
+      "dim": "VAR\uf8fftype:DICT",
+      "reason": "constant"
+    },
+    {
+      "dim": "VAR\uf8fftype:CALLABLE",
+      "reason": "constant"
+    },
+    {
+      "dim": "VAR\uf8fftype:BOOL",
+      "reason": "constant"
+    },
+    {
+      "dim": "VAR\uf8fftype:MIXED",
+      "reason": "constant"
+    },
+    {
+      "dim": "VAR\uf8ffrole:IN",
+      "reason": "constant"
+    },
+    {
+      "dim": "VAR\uf8ffrole:OUT",
+      "reason": "redundant-with VAR_COUNT r=1.00"
+    },
+    {
+      "dim": "VAR\uf8ffrole:INOUT",
+      "reason": "constant"
+    }
+  ]
+}

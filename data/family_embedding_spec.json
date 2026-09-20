@@ -1,0 +1,18 @@
+{
+  "families": [
+    "AGGREGATE",
+    "EFF",
+    "FLOW",
+    "GRAPH",
+    "IN",
+    "OUT",
+    "PARAM_ROLE",
+    "PARAM_TYPE",
+    "PRIM",
+    "PROP",
+    "TAINT",
+    "VAL",
+    "VAR_ROLE",
+    "VAR_TYPE"
+  ]
+}

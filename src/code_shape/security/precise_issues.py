@@ -77,7 +77,12 @@ PRECISE_SINKS = [
     ("CMD_INJECTION", [r"\bos\.system\s*\(", r"\bsystem\s*\(", r"\bsubprocess\.(?:call|run|Popen)\s*\(",
                        r"\bRuntime\.getRuntime\(\)\.exec\s*\(", r"\bProcessBuilder\b",
                        r"\bshell_exec\s*\(", r"\bpassthru\s*\(", r"\bpopen\s*\(", r"\bproc_open\s*\(",
-                       r"\bchild_process\.(?:exec|execSync)\b", r"\bexecSync\s*\("]),
+                       r"\bchild_process\.(?:exec|execSync)\b", r"\bexecSync\s*\(",
+                       # reflective invocation: getattr(os, "system")(...) / getattr built dynamically.
+                       r"\bgetattr\s*\(\s*\w+\s*,\s*['\"]\s*(?:system|exec|eval|popen|call|run|check_output|popen|spawn)\s*['\"]\s*\)",
+                       # reflective on __builtins__ / dynamic import of dangerous modules
+                       r"\bgetattr\s*\(\s*__builtins__\s*,\s*['\"]\s*(?:eval|exec|compile)['\"]\s*\)",
+                       r"\b__import__\s*\(\s*['\"](?:os|subprocess|pty)['\"]"]),
     ("SQL_INJECTION", [r"\.execute\s*\([^)]*SELECT[^)]*\+", r"\.execute\s*\([^)]*INSERT[^)]*\+",
                        r"\.execute\s*\([^)]*UPDATE[^)]*\+", r"\.execute\s*\([^)]*DELETE[^)]*\+",
                        r"\.query\s*\([^)]*SELECT[^)]*\+", r"\.query\s*\([^)]*INSERT[^)]*\+",
@@ -95,8 +100,9 @@ PRECISE_SINKS = [
                         r"\bopen\s*\(\s*f[\"']", r"\breadFile(?:Sync)?\s*\(\s*`",
                         r"\bopen\s*\([^)]*\.format\(",
                         r"\b(?:open|readFile|readFileSync)\s*\(\s*`[^`]*\$\{[^`]*\}[^`]*`"]),
-    ("XSS", [r"\binnerHTML\s*=\s*[^;]*\+", r"\bdocument\.write\s*\([^)]*\+",
+    ("XSS", [r"\binnerHTML\s*=\s*[^;]*\+", r"\binnerHTML\s*\+=\s*[^;]*", r"\bdocument\.write\s*\([^)]*\+",
              r"\.html\s*\([^)]*\+", r"\bv-html\b",
+             r"\.outerHTML\s*=\s*[^;\n]*[+\w]|[A-Za-z0-9\]].?\)?\s*\bouterHTML\s*=", r"\.setAttribute\s*\([^)]*(?:href|src|style)", r"\.insertAdjacentHTML\s*\([^)]*,\s*[A-Za-z_]\w*",
              r"return\s*[\"']<[^\"']*[\"']\s*\+",
              r"\binnerHTML\s*=\s*`[^`]*\$\{[^`]*\}[^`]*`",
              r"\bdocument\.write\s*\(\s*`[^`]*\$\{[^`]*\}[^`]*`",
@@ -104,9 +110,17 @@ PRECISE_SINKS = [
              r"return\s*f[\"']<[^\"']*\{",
              r"\bINSERT\s+INTO\s+comments\b"]),
     ("DESERIALIZATION", [r"\bpickle\.loads\b", r"\bpickle\.load\s*\(", r"\byaml\.load\s*\(",
-                         r"\bunserialize\s*\(", r"\bObjectInputStream\b", r"\breadObject\b"]),
+                         r"\bunserialize\s*\(", r"\bObjectInputStream\b", r"\breadObject\b",
+                         r"\b\.unpackb\s*\(", r"\bmarshal\.loads\b", r"\bshelve\.open\b"]),
     ("HARDCODED_CRED", [r"\bpassword\s*=\s*[\"'][^\"']+[\"']", r"\bapi_key\s*=\s*[\"'][^\"']+[\"']",
-                        r"Bearer\s+[A-Za-z0-9._-]{10,}"]),
+                        r"Bearer\s+[A-Za-z0-9._-]{10,}",
+                        # secret-bearing var assignments (TOKEN/SECRET/API_*/JWT/KEY)
+                        r"\b\w*(?:token|secret|apikey|api_key|jwt|credential|passwd|password)\w*\s*=\s*['\"][^'\"]{8,}['\"]",
+                        # OpenAI-style sk-... and JWT (eyJ...) bearer secrets
+                        r"['\"]sk-(?:live|test|proj)-[A-Za-z0-9_-]{16,}['\"]",
+                        r"['\"]eyJ[A-Za-z0-9_-]{6,}\.(?:[A-Za-z0-9_-]{6,}\.)?[A-Za-z0-9_-]{4,}['\"]",
+                        # PEM private keys (RSA/EC/OPENSSH/etc.)
+                        r"-----BEGIN [A-Z ]*PRIVATE KEY-----"]),
     ("SSRF", [r"requests\.get\s*\([^,)]*\+", r"requests\.post\s*\([^,)]*\+",
               r"urlopen\s*\([^,)]*\+", r"fetch\s*\([^,)]*\+",
               r"requests\.(?:get|post)\s*\(\s*f[\"']", r"urlopen\s*\(\s*f[\"']",
@@ -124,19 +138,49 @@ PRECISE_SINKS = [
     ("HEADER_INJECTION", [r"headers\[['\"]Location['\"]\]\s*=\s*[^;]*\+",
                            r"headers\[['\"]Location['\"]\]\s*=\s*request",
                            r"headers\[['\"]Location['\"]\]\s*=\s*[a-zA-Z_]\w*"]),
-    ("LOG_INJECTION", [r"logger\.(?:info|warning|error)\s*\([^)]*\+"]),
+    ("LOG_INJECTION", [r"logger\.(?:info|warning|error|debug|critical)\s*\([^)]*\+",
+                        r"logging\.(?:info|warning|error|debug|critical)\s*\([^)]*\+",
+                        r"console\.log\s*\([^)]*\+", r"log\.(?:info|debug|warn|error)\s*\([^)]*\+",
+                        r"print\s*\([^)]*\+.*\b(user|req|request|input|query|id)\b"]),
     ("OPEN_REDIRECT", [r"\bredirect\s*\([^)]*request", r"\bredirect\s*\(\s*[a-zA-Z_]\w*"]),
     ("INSECURE_RANDOM", [r"random\.(?:random|randint|choice|uniform)\s*\("]),
-    ("WEAK_HASH", [r"hashlib\.md5\s*\(", r"hashlib\.sha1\s*\("]),
+    ("WEAK_HASH", [r"hashlib\.md5\s*\(", r"hashlib\.sha1\s*\(", 
+                   # weak crypto primitives: DES/3DES/RC4/Blowfish/MD2/MD4 insecure modes
+                   r"\bDES\.new\b", r"\b3DES\.new\b", r"\bARC4\.new\b", r"\bBlowfish\.new\b",
+                   r"\bmd2\s*\(", r"\bmd4\s*\(", r"\bECB\.new\b",
+                   # cross-language weak hashing: CryptoJS.MD5 (JS), openssl md5 (PHP),
+                   # MessageDigest MD5 (Java), digest('md5', ...) (many).
+                   r"CryptoJS\.(?:MD5|SHA1)\b", r"MessageDigest.*(?:MD5|SHA-1)",
+                   r"(?:openssl::digest|hash_init|digest)\s*\(\s*['\"]md5['\"]",
+                   r"'md5'\s*,\s*[A-Za-z_]\w*", r"\bmd5\s*\(",
+                   # small/insecure key sizes (RSA/DSA <2048 bits deprecated)
+                   r"\bRSA\.generate\s*\(\s*(?:512|768|1024)\b",
+                   r"\bkey_length\s*=\s*(?:512|768|1024)\b"]),
     ("CSRF", [r"transfer_money\s*\(", r"update_password\s*\(", r"delete_user\s*\("]),
     ("IDOR", [r"\.execute\s*\([^)]*WHERE\s+id\s*=\s*\?[^)]*,\s*\(\s*(?:uid|id|user_id)\b",
               r"\.execute\s*\([^)]*WHERE\s+user_id\s*=\s*\?[^)]*,\s*\(\s*(?:uid|id|user_id)\b"]),
 ]
 
+# Sink types that must be driven by a tainted source. Their patterns can match
+# benign code (e.g. `logger.info('u ' + str(name))` concatenates a `+` but has no
+# untrusted input), so we require a tainted source on the sink line (or a
+# code-wide taint signal) before reporting — exactly like the bare-var guard.
+REQUIRES_TAINT = {
+    "LOG_INJECTION", "OPEN_REDIRECT", "XSS", "HEADER_INJECTION",
+}
+
 # Taint sources
 TAINT_SOURCES = ["request", "req", "ctx", "input", "argv", "os.environ",
                  "$_GET", "$_POST", "$_REQUEST", "body", "params", "query",
                  "form", "json", "data", "cookie", "header", "session"]
+
+# Words that are CLEAR standalone entry signals for a code-wide taint check.
+# `json`/`data`/`form`/`query` etc. are too common as generic code tokens or
+# filenames (e.g. `app.json`, `query = ...`) to set a code-wide taint flag —
+# they still count as sources when they appear ON the actual sink line.
+_CODE_WIDE_TAINT_SOURCES = ["request", "req", "argv", "os.environ",
+                            "$_GET", "$_POST", "$_REQUEST", "stdin",
+                            "get", "input", "raw_input", "body", "environ"]
 
 
 def _is_declaration(code: str, match_start: int) -> bool:
@@ -182,6 +226,274 @@ def _has_mitigation(vtype: str, line: str) -> bool:
     return False
 
 
+# Dangerous callable names whose aliasing (alias = eval, run = os.system) is a
+# direct obfuscation of a dangerous sink, mapped to the vuln type they cause.
+_ALIASABLE_SINKS = {
+    "eval": "EVAL_USE", "compile": "EVAL_USE", "exec": "EVAL_USE",
+    "system": "CMD_INJECTION", "popen": "CMD_INJECTION", "execvp": "CMD_INJECTION",
+    "call": "CMD_INJECTION", "run": "CMD_INJECTION", "check_output": "CMD_INJECTION",
+    "Popen": "CMD_INJECTION", "spawn": "CMD_INJECTION", "shell": "CMD_INJECTION",
+    "pickle.loads": "DESERIALIZATION", "pickle.load": "DESERIALIZATION",
+    "yaml.load": "DESERIALIZATION", "unserialize": "DESERIALIZATION",
+    "render_template_string": "TEMPLATE_INJECTION", "loads": "DESERIALIZATION", "load": "DESERIALIZATION",
+}
+
+# Reflective builtins that become dangerous when INVOKED with a dangerous
+# function/module name (an alias to getattr/__import__ used for RCE evasion).
+_REFLECTIVE_ALIASES = {"getattr": "getattr", "__import__": "__import__"}
+
+
+def _find_alias_sinks(code: str, lines: List[str], file_path: str,
+                      taint_vars, has_code_taint) -> List[Dict]:
+    """Detect aliased dangerous-sink calls: `run = os.system; run(c)` and
+    `execute = eval; execute(x)`. When a variable is assigned a dangerous
+    callable and later invoked with an argument, that's the same sink — an
+    obfuscation pattern static sink-regexes miss."""
+    from code_shape.security.taxonomy import enrich_vulnerability
+    issues = []
+    aliases = {}
+    # 1. collect alias assignments: var = <dangerous callable>
+    for m in re.finditer(r"\b(\w+)\s*=\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?)\s*$", code, re.MULTILINE):
+        var, rhs = m.group(1), m.group(2).strip()
+        base = rhs.split(".")[-1] if "." in rhs else rhs
+        if var in ("self", "cls"):
+            continue
+        if base in _ALIASABLE_SINKS:
+            aliases[var] = ("sink", _ALIASABLE_SINKS[base])
+        elif base in _REFLECTIVE_ALIASES:
+            # g = getattr / gi = __import__ — dangerous only when invoked
+            # reflectively, so store the reflective base to match args against.
+            aliases[var] = ("reflective", base)
+    if not aliases:
+        return []
+    # 2. report alias invocations alias(...) that reach a tainted arg or have taint.
+    for alias, (kind, vtype) in aliases.items():
+        for m in re.finditer(r"\b" + re.escape(alias) + r"\s*\((.*?)\)", code):
+            line_no = code[: m.start()].count("\n") + 1
+            arg = m.group(1).strip()
+            # an alias call of a dangerous sink only matters if it has an argument
+            # (a real invocation) and ideally a taint signal.
+            if not arg:
+                continue
+            # skip if it's the assignment line itself (`run = os.system` line)
+            if line_no == code[: code.find(alias)].count("\n") + 1:
+                continue
+            src = None
+            for s in TAINT_SOURCES:
+                if re.search(r"\b" + re.escape(s) + r"\b", lines[line_no - 1] if 0 < line_no <= len(lines) else "", re.IGNORECASE):
+                    src = s
+                    break
+            if not src:
+                for v in taint_vars:
+                    if re.search(r"\b" + re.escape(v) + r"\b", arg):
+                        src = v
+                        break
+            # reflective alias (g = getattr / gi = __import__): only fires when
+            # the invocation args name a dangerous function/module.
+            if kind == "reflective":
+                call = f"{alias}({arg})"
+                if vtype == "getattr":
+                    if not re.search(r"(?:eval|exec|compile|system|popen|calls?)\b", arg):
+                        continue
+                else:  # __import__
+                    if not re.search(r"['\"](?:os|subprocess|pty|commands)['\"]", arg):
+                        continue
+                vtype = "CMD_INJECTION"
+            needs_taint = vtype in REQUIRES_TAINT
+            if not src and (needs_taint or not has_code_taint) and vtype not in _SELF_TAINTED_ALIAS:
+                continue
+            from code_shape.core.code_shape_core import shape
+            enc_name = "<module>"
+            enc_shape = "ALIAS"
+            issues.append({
+                "type": vtype, "line": line_no, "sink": f"{alias}({arg[:20]})",
+                "source": src, "shape_dimension": _shape_dimension(vtype, alias),
+                "code_line": lines[line_no - 1].strip()[:60] if 0 < line_no <= len(lines) else "",
+                "file": file_path or "<snippet>",
+                "function": enc_name, "function_lines": [1, len(lines)],
+                "shape_part": enc_shape,
+                "path": (src + " -> " if src else "") + f"{alias}()",
+                "path_hops": [src or "?", alias],
+            })
+    return [enrich_vulnerability(i, code) for i in issues]
+
+
+_SELF_TAINTED_ALIAS = {"EVAL_USE", "CMD_INJECTION", "DESERIALIZATION"}
+
+# Map of sink SHAPE role -> vulnerability type for the shape-driven pass.
+_SHAPE_ROLE_TO_VULN = {
+    "CODE_EXEC": "CMD_INJECTION",
+    "SQL": "SQL_INJECTION",
+    "FILE": "PATH_TRAVERSAL",
+    "RENDER": "XSS",
+    "DESERIALIZE": "DESERIALIZATION",
+    "MEMORY": "BUFFER_OVERFLOW",
+}
+
+# Common call names that are NOT sinks even if their shape is role-like (avoid
+# false positives: e.g. `query` used for an in-memory filter, `fetch` for a
+# network client that validates). Only flag when the role score is strong AND a
+# tainted argument reaches the call.
+_NON_SINK_CALLS = {
+    "query", "fetch", "load", "open", "read", "write", "get", "post", "put",
+    "delete", "filter", "map", "reduce", "search", "find", "getattr",
+    "str", "int", "float", "list", "dict", "set", "len", "print", "input",
+    "requests.get", "requests.post", "urlopen",  # handled by SSRF/other paths
+    # polymorphic names already handled by exact precise-sink regexes — the
+    # shape pass is for OBSCURE custom sink names, not re-flagging these.
+    "execute", "exec", "system", "eval", "popen", "call", "run", "check_output",
+    "Popen", "spawn", "render_template_string", "pickle", "md5", "sha1",
+}
+
+
+def _shape_sinks(code: str, lines: List[str], file_path: str,
+                 taint_vars, has_code_taint) -> List[Dict]:
+    """Shape-driven dangerous-call detection.
+
+    Finds custom/obscure sink NAMES (e.g. `invoke_process`, `query_users`,
+    `copy_buffer`) whose CODE SHAPE — the semantic-role vector from
+    sink_shape_vector — matches a dangerous role AND which receive a tainted
+    argument. This catches vulnerabilities by geometric shape, not exact-function
+    enumeration: a function named `query_users` concatenating a tainted var into
+    a SQL string is a SQL injection even if `execute`/`query` never appear
+    literally as a known sink.
+    """
+    from code_shape.security.sink_shape_vector import classify_sink
+    issues = []
+    try:
+        from code_shape.core.agnostic_shape import _tokenize
+        toks = _tokenize(code)
+    except Exception:
+        return []
+    # cross-language function parameters (Java `void f(String c)`, PHP
+    # `function f($v)`, Go `func f(c string)`, ...) — a shape-role sink
+    # receiving such a param is tainted (params are entry points), even when
+    # _propagate_taint (Python-centric) didn't mark them.
+    param_names = set(taint_vars)
+    # def/function/func/fun name(params) — Python/JS/Ruby/Go/Rust
+    for m in re.finditer(r"(?:def|function|func|fun)\s+[\w:]+\s*\(([^)]*)\)", code):
+        for p in m.group(1).split(","):
+            p = p.strip()
+            tok = re.split(r"[:\s=]", p)[0]
+            tok = re.sub(r"[\$@]", "", tok)
+            if re.match(r"^[A-Za-z_]\w*$", tok):
+                param_names.add(tok)
+    # Java/C/Go-style typed definitions: only when guarded by an access modifier
+    # (which never appears before a CALL) or a Go `func` — `void f(String c)`,
+    # `public String run(String c)`, `private void helper(int n)`. Requiring the
+    # modifier (or func) avoids mistaking `return query_users(x)` for a def.
+    # line-start typed def: `void f(String c)`, `int main(int n)`, or with an
+    # access modifier `public void f(String c)`. Line-anchored + modifier
+    # guards against treating a CALL (mid-statement) as a definition.
+    for sig in re.finditer(
+        r"(?m)^\s*(?:(public|private|protected|static)\s+)?(\S+)\s+([A-Za-z_]\w*)\s*\(([^)]*)\)", code):
+        typeword, fname, plist = sig.group(2), sig.group(3), sig.group(4)
+        # skip statement-verbs that would make a CALL look like a definition
+        # (`return foo(x)`, `throw e`, `echo ...`), and language keywords.
+        if typeword.lower() in ("return", "throw", "yield", "await", "echo",
+                                "print", "printf", "new", "if", "for", "while",
+                                "switch", "catch", "import", "from", "using",
+                                "namespace", "package", "require", "include",
+                                "return", "break", "continue", "else", "elif"):
+            continue
+        if fname.lower() in ("if", "for", "while", "switch", "catch", "new", "return"):
+            continue
+        for p in plist.split(","):
+            p = p.strip()
+            # last whitespace-separated token is the param name in typed langs
+            tok = p.split()[-1] if p.split() else ""
+            tok = tok.replace("$", "").replace("*", "")
+            if re.match(r"^[A-Za-z_]\w*$", tok):
+                param_names.add(tok)
+
+    # walk calls `name(` and pair with their closing paren to capture args.
+    i = 0
+    n = len(toks)
+    while i < n:
+        t = toks[i]
+        if i + 1 < n and toks[i + 1] == "(" and (t.isidentifier() or "." in t):
+            # skip function DEFINITIONS (def/function/func/fun name(...) —
+            # these are not sink invocations and their names often look like
+            # sinks, e.g. `def executeSearch(...)`).
+            if i > 0 and toks[i - 1] in ("def", "function", "func", "fun",
+                                         "fn", "const", "let", "var", "class"):
+                i += 1
+                continue
+            name = t
+            # capture args until matching close paren
+            depth = 1
+            j = i + 2
+            arg_toks = []
+            while j < n and depth > 0:
+                if toks[j] == "(":
+                    depth += 1
+                elif toks[j] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                arg_toks.append(toks[j])
+                j += 1
+            args = " ".join(arg_toks)[:120]
+            # classify by SHAPE
+            try:
+                cls = classify_sink(name, args)
+            except Exception:
+                cls = {"is_sink": False}
+            if not cls.get("is_sink"):
+                i += 1
+                continue
+            role = cls["role"]
+            if role not in _SHAPE_ROLE_TO_VULN:
+                i += 1
+                continue
+            if name in _NON_SINK_CALLS:
+                i += 1
+                continue
+            vtype = _SHAPE_ROLE_TO_VULN[role]
+            # taint gate: only flag when a tainted source flows into the call.
+            line_no = code[: code.find(name)].count("\n") + 1 if name in code else 1
+            src = None
+            # strip string literals from the line first so a source keyword
+            # inside a filename/string (e.g. `load_config('app.json')`) isn't
+            # mistaken for an input source.
+            _sline = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+            try:
+                from code_shape.core.agnostic_shape import _strip_strings_and_comments
+                _sline = _strip_strings_and_comments(_sline)
+            except Exception:
+                pass
+            for s in TAINT_SOURCES:
+                if re.search(r"\b" + re.escape(s) + r"\b", _sline, re.IGNORECASE):
+                    src = s
+                    break
+            if not src:
+                for v in taint_vars:
+                    if re.search(r"\b" + re.escape(v) + r"\b", args):
+                        src = v
+                        break
+            if not src:
+                # any function param flowing into a shape-role sink is tainted
+                for p in param_names:
+                    if re.search(r"\b" + re.escape(p) + r"\b", args):
+                        src = p
+                        break
+            if not src and not has_code_taint:
+                i += 1
+                continue
+            issues.append({
+                "type": vtype, "line": line_no, "sink": f"{name}({args[:30]})",
+                "source": src, "shape_dimension": f"SHAPE:{role}",
+                "code_line": lines[line_no - 1].strip()[:60] if 0 < line_no <= len(lines) else "",
+                "file": file_path or "<snippet>",
+                "function": "<module>", "function_lines": [1, len(lines)],
+                "shape_part": f"SHAPE>{role}",
+                "path": (src + " -> " if src else "") + f"{name}()",
+                "path_hops": [src or "?", name],
+            })
+        i += 1
+    return issues
+
+
 def find_precise_issues(code: str, file_path: Optional[str] = None, lang: Optional[str] = None) -> List[Dict]:
     """Find precise issues with word-boundary + declaration exclusion + mitigation."""
     issues = []
@@ -194,7 +506,13 @@ def find_precise_issues(code: str, file_path: Optional[str] = None, lang: Option
         taint_vars = set(taint.keys())
     except Exception:
         pass
-    has_code_taint = bool(taint_vars) or any(re.search(r"\b" + re.escape(s) + r"\b", code, re.IGNORECASE) for s in TAINT_SOURCES)
+    # Code-wide taint uses the CLEAR entry signals only. Common words like
+    # `json`/`data`/`form`/`query` appearing anywhere (e.g. the filename
+    # `app.json`, an in-memory `query` var) must NOT set code-wide taint or
+    # every JSON-using file becomes tainted — a systemic false-positive source.
+    has_code_taint = bool(taint_vars) or any(
+        re.search(r"\b" + re.escape(s) + r"\b", code, re.IGNORECASE)
+        for s in _CODE_WIDE_TAINT_SOURCES)
 
     for vtype, patterns in PRECISE_SINKS:
         for pat in patterns:
@@ -218,13 +536,31 @@ def find_precise_issues(code: str, file_path: Optional[str] = None, lang: Option
                         if re.search(r"\b" + re.escape(var) + r"\b", line):
                             source = var
                             break
-                # For bare variable-only sinks, require some taint signal in code
+                # For bare variable-only sinks, require some taint signal in code.
+                # Template-literal interpolation (${...}) INTO a DOM/exec sink,
+                # or a direct DOM mutation (innerHTML=, innerHTML+=, document.write,
+                # .html()) is itself the dangerous action — the sink is
+                # unambiguously an XSS vector regardless of the assigned variable,
+                # so it counts as self-taint rather than being gated on a named
+                # TAINT_SOURCE.
                 is_bare_var = pat.endswith(r"[a-zA-Z_]\w*") or vtype in ("CSRF", "IDOR")
-                if is_bare_var and not source and not has_code_taint:
+                sink_self_tainted = ("${" in sink) or ("f" in (m.group(0)[:1] if m.group(0) else ""))
+                if vtype == "XSS" and re.search(r"innerHTML\s*(?:=|\+=)|document\.write|\.html\s*\(|v-html", sink):
+                    sink_self_tainted = True
+                if (is_bare_var or vtype in REQUIRES_TAINT) and not source and not has_code_taint and not sink_self_tainted:
                     continue
                 shape_dim = _shape_dimension(vtype, sink)
                 enc = find_enclosing_function(code, line_no, lang)
-                path_desc = f"{source} -> {sink}" if source else sink
+                # Emit the FULL source->sink data-flow path (Route Sixty-Sink style),
+                # not just a shallow 2-hop string.
+                try:
+                    from code_shape.core.value_flow_shape import trace_taint_path, _extract_params
+                    chain = trace_taint_path(code, line, _extract_params(code))
+                    path_desc = " -> ".join(str(x) for x in chain)
+                    path_hops = [str(x) for x in chain]
+                except Exception:
+                    path_desc = f"{source} -> {sink}" if source else sink
+                    path_hops = [source or "UNKNOWN", sink]
                 issues.append({
                     "type": vtype, "line": line_no, "sink": sink,
                     "source": source, "shape_dimension": shape_dim,
@@ -234,7 +570,14 @@ def find_precise_issues(code: str, file_path: Optional[str] = None, lang: Option
                     "function_lines": [enc["start_line"], enc["end_line"]],
                     "shape_part": enc["shape_part"],
                     "path": path_desc,
+                    "path_hops": path_hops,
                 })
+    # aliased dangerous-sink calls (run = os.system; run(x) / execute = eval)
+    issues += _find_alias_sinks(code, lines, file_path, taint_vars, has_code_taint)
+    # shape-driven dangerous calls: flag custom/obscure sink NAMES whose code
+    # SHAPE (role vector) matches a dangerous role with a tainted argument,
+    # even when no exact sink regex matches.
+    issues += _shape_sinks(code, lines, file_path, taint_vars, has_code_taint)
     # dedupe by (type, line)
     seen = set()
     unique = []
@@ -271,9 +614,14 @@ def find_buffer_overflows(code: str, file_path: Optional[str] = None, lang: Opti
     for s in subscripts:
         if s["class"] in ("LIST_INDEX", "UNKNOWN_ACCESS"):
             raw_idx = s["index"]
-            # handle slice or simple index e.g. 0:length -> length
-            idx_var = raw_idx.split(":")[-1].strip() if ":" in raw_idx else raw_idx.strip()
-            if idx_var in types and types[idx_var] == "PARAM":
+            # handle slice or simple index: check the LOWER bound first (the
+            # attacker-controlled start), then the upper bound for a param.
+            parts = [p.strip() for p in raw_idx.split(":")]
+            if len(parts) == 1:
+                idx_var = parts[0]
+            else:
+                idx_var = next((p for p in parts if p in types and types[p] == "PARAM"), parts[0] or "")
+            if idx_var and idx_var in types and types[idx_var] == "PARAM":
                 has_bounds = re.search(r"if\s+0\s*<=\s*\w+\s*<\s*len|if\s+\w+\s*<\s*len|if\s+\w+\s*<=\s*len", code)
                 if not has_bounds:
                     # find line

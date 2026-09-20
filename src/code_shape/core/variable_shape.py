@@ -380,6 +380,26 @@ def _infer_python_types(code: str) -> Dict[str, str]:
             var = node.args[0].id
             if types.get(var) in (None, "UNKNOWN"):
                 types[var] = "LIST"
+        # coercion builtin argument: int(x)/float(x)/str(x)/bool(x) -> the
+        # argument is a scalar of the coerced family (NUM/STR/BOOL). This is
+        # the common `return int(data)` pattern that param-usage inference
+        # must catch before cross-function propagation can work.
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id in ("int", "float", "complex") \
+                and node.args and isinstance(node.args[0], ast.Name):
+            var = node.args[0].id
+            if types.get(var) in (None, "UNKNOWN"):
+                types[var] = "NUM"
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id == "str" and node.args and isinstance(node.args[0], ast.Name):
+            var = node.args[0].id
+            if types.get(var) in (None, "UNKNOWN"):
+                types[var] = "STR"
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                and node.func.id == "bool" and node.args and isinstance(node.args[0], ast.Name):
+            var = node.args[0].id
+            if types.get(var) in (None, "UNKNOWN"):
+                types[var] = "BOOL"
         # for x in var -> var is a collection
         if isinstance(node, ast.For) and isinstance(node.iter, ast.Name):
             var = node.iter.id

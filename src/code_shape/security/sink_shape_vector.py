@@ -24,9 +24,11 @@ ROLE_PRIMITIVES = {
                   "invoke", "command", "process", "run", "lookup", "jndi", "ognl"],
     "SQL": ["query", "select", "insert", "update", "delete", "sql", "execute"],
     "FILE": ["open", "read", "write", "file", "path", "unlink", "remove"],
-    "RENDER": ["render", "html", "template", "markup", "innerhtml", "append"],
+    "RENDER": ["render", "html", "template", "markup", "innerhtml", "append",
+               "paint", "draw", "content", "inner", "outer", "write_html", "insert"],
     "DESERIALIZE": ["load", "unserialize", "deserialize", "pickle", "yaml",
-                    "marshal", "parse", "readobject"],
+                    "marshal", "parse", "readobject", "unpack", "decode",
+                    "hydrate", "restore", "unwrap"],
     "MEMORY": ["memcpy", "strcpy", "strcat", "sprintf", "buffer", "slice",
                "substring", "index", "offset"],
 }

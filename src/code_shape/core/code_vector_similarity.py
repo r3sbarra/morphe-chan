@@ -71,21 +71,36 @@ def clone_score(code_a: str, code_b: str, structural: bool = False) -> float:
 
     structural=True uses the structural vector (identifiers normalized), which
     better captures semantic clones (renamed variables).
+
+    Either way, a semantic-polarity penalty is applied so snippets using
+    opposite operations (e.g. `a + b` vs `a - b`) are not scored as clones.
     """
-    if structural:
-        return cosine(vectorize_structural(code_a), vectorize_structural(code_b))
-    return cosine(vectorize(code_a), vectorize(code_b))
+    base = (
+        cosine(vectorize_structural(code_a), vectorize_structural(code_b))
+        if structural
+        else cosine(vectorize(code_a), vectorize(code_b))
+    )
+    from .agnostic_shape import decompose
+    from .polarity import combined_similarity_penalty
+    return combined_similarity_penalty(base, decompose(code_a), decompose(code_b), code_a, code_b)
 
 
 def detect_clones(snippets: List[str], threshold: float = 0.7, structural: bool = False) -> List[Tuple[int, int, float]]:
-    """Return all (i, j, score) pairs above the clone threshold."""
+    """Return all (i, j, score) pairs above the clone threshold.
+
+    Vectors are precomputed once (O(n) tokenizations) instead of re-tokenizing
+    inside the O(n^2) pair loop, which makes large batches much faster.
+    """
+    vecs = [
+        (vectorize_structural(s) if structural else vectorize(s))
+        for s in snippets
+    ]
     pairs: List[Tuple[int, int, float]] = []
-    n = len(snippets)
+    n = len(vecs)
     for i in range(n):
-        vi = vectorize_structural(snippets[i]) if structural else vectorize(snippets[i])
+        vi = vecs[i]
         for j in range(i + 1, n):
-            vj = vectorize_structural(snippets[j]) if structural else vectorize(snippets[j])
-            s = cosine(vi, vj)
+            s = cosine(vi, vecs[j])
             if s >= threshold:
                 pairs.append((i, j, round(s, 4)))
     return pairs

@@ -154,6 +154,10 @@ def main():
     p.add_argument("--lang", default=None, help="language hint")
     _add_report_flag(p)
 
+    p = sub.add_parser("security", help="Security posture of a project/directory",
+                       description="Scan a directory and produce a security-posture profile: aggregated risk score + grade, severity/type/CWE distribution, per-file risk ranking, and per-file remediation actions.")
+    p.add_argument("dir", help="project directory to scan")
+
     # paths
     p = sub.add_parser("paths", help="Trace in-to-out dataflow paths through code",
                        description="Trace complete dataflow paths from input parameters to returns and sinks with geometric shape sequences.")
@@ -182,6 +186,15 @@ def main():
     p = sub.add_parser("project", help="Composite shape of a project",
                        description="Full composite shape vector of an entire project (language distribution, primitives, functions, connections, sinks, imports).")
     p.add_argument("dir", help="project directory")
+    _add_report_flag(p)
+
+    # anomalies
+    p = sub.add_parser("anomalies", help="Geometric anomaly detection across a directory",
+                       description="Embed every function on the PRIM:* shape subspace, build a reference centroid, and flag functions that are structural outliers (distant from the norm) = candidate smells / dead code / unusual logic.")
+    p.add_argument("dir", help="directory to scan")
+    p.add_argument("--lang", default="python", help="language (default: python)")
+    p.add_argument("--k", type=float, default=2.0, help="outlier threshold in std-devs from mean (default 2.0)")
+    p.add_argument("--limit", type=int, default=12, help="max anomalies to print (default 12)")
     _add_report_flag(p)
 
     # imports
@@ -302,6 +315,70 @@ def main():
         else:
             print("no vulnerabilities detected")
         _maybe_report(args, "vulns", args.code, code=code, lang=args.lang)
+
+    elif args.cmd == "anomalies":
+        from code_shape.analysis.anomaly_detector import AnomalyDetector, prim_projection
+        import os as _os
+        _root = args.dir
+        _py = []
+        for _dp, _dn, _fn in _os.walk(_root):
+            _dn[:] = [d for d in _dn if d not in ("node_modules", ".git", "__pycache__", ".venv", "venv", "dist", "build", "target")]
+            for f in _fn:
+                if f.endswith((".py", ".js", ".ts", ".go", ".java", ".rs", ".rb", ".php", ".kt", ".swift", ".c", ".cpp", ".cs")):
+                    _py.append(_os.path.join(_dp, f))
+        # extract functions (coarse def-based) as the reference corpus
+        _corpus = []  # (label, code, lang)
+        import re as _re
+        for _path in _py:
+            try:
+                _text = open(_path, errors="replace").read()
+            except Exception:
+                continue
+            _lines = _text.splitlines()
+            _i = 0
+            while _i < len(_lines):
+                _s = _lines[_i]
+                _st = _s.strip()
+                if _re.match(r"^(?:def |    def |function |func |fn |fun |static .*\()", _st) and "(" in _st:
+                    _body = [_s]
+                    _j = _i + 1
+                    _base = len(_s) - len(_s.lstrip())
+                    while _j < len(_lines):
+                        _nl = _lines[_j]
+                        if _nl.strip() and len(_nl) - len(_nl.lstrip()) <= _base:
+                            break
+                        _body.append(_nl)
+                        _j += 1
+                    _full = "\n".join(_body)
+                    if 5 < len(_full) < 1500:
+                        _corpus.append((f"{_os.path.basename(_path)}::{_st.strip()}", _full))
+                    _i = _j
+                    continue
+                _i += 1
+        if not _corpus:
+            print("no functions extracted from", _root)
+        else:
+            _det = AnomalyDetector([(lbl, code, args.lang) for lbl, code in _corpus], args.lang)
+            _outs = _det.top_outliers([(lbl, code) for lbl, code in _corpus], k=args.k, lang=args.lang, limit=args.limit)
+            print(f"anomalies in {len(_corpus)} functions (threshold μ+{args.k}σ): {sum(1 for o in _outs if o[3])} flagged")
+            for lbl, code, score, is_out in _outs:
+                mark = "★" if is_out else " "
+                print(f"  {mark} {score:.3f}  {lbl}")
+            _maybe_report(args, "anomalies", _root, project_dir=_root,
+                          extra={"anomalies": [{"label": l, "code": c, "score": s, "outlier": o}
+                                               for l, c, s, o in _outs]})
+
+    elif args.cmd == "security":
+        from code_shape.security.posture import scan_project, report, remediations
+        issues = scan_project(args.dir)
+        print(report(issues))
+        acts = remediations(issues, by_file=True)
+        if acts:
+            print("\nRemediation actions by file:")
+            for f, lines in list(acts.items())[:8]:
+                print(f"  [{f}]")
+                for ln in lines[:4]:
+                    print(f"    {ln}")
 
     elif args.cmd == "paths":
         code = _read_input(args.code)

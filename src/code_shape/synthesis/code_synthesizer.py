@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 TEMPLATES: Dict[str, List[str]] = {
     "LOOP":      ["for item in items:", "for i in range(n):", "while cond:"],
     "BRANCH":    ["if cond:", "if x > y:", "if x < y:", "if x == y:"],
-    "ARITH_ADD": ["total += item", "result = a + b", "x = x + 1"],
+    "ARITH_ADD": ["result = a + b", "x = x + 1"],
     "ARITH_SUB": ["result = a - b", "x = x - 1"],
     "ARITH_MUL": ["result = a * b", "total *= item"],
     "ARITH_DIV": ["result = a / b", "avg = total / n"],
@@ -32,14 +32,44 @@ TEMPLATES: Dict[str, List[str]] = {
     "COMPARE_LT":["if x < y:", "if a < b:"],
     "ASSIGN":    ["total = 0", "result = 0", "acc = 0"],
     "RETURN":    ["return total", "return result", "return x"],
-    "READ":      ["def fn(items):", "def fn(a, b):", "def fn(x):"],
+    "READ":      ["data = open('f').read()", "data = read()", "data = input()"],
     "WRITE":     ["print(result)", "return result"],
     "AGGREGATE": ["total += item", "acc = acc + item", "count += 1"],
-    "FILTER":    ["if x % 2 == 0:", "if x > 0:"],
+    "FILTER":    ["result = filter(items, pred)", "if x % 2 == 0:", "if x > 0:"],
     "SORT":      ["return sorted(items)", "items.sort()"],
-    "SEARCH":    ["return items.index(x)", "if x in items:"],
+    "SEARCH":    ["result = find(items, x)", "result = items.index(x)", "if x in items:"],
     "STATE":     ["total += item", "count += 1", "result = result + x"],
 }
+
+# JavaScript-flavored templates for the same primitives (language-aware synth; self-derived
+# fix for the synthesizer ignoring its `language` arg). Kept parallel to TEMPLATES so the
+# same shape string synthesizes into either Python or JS.
+JS_TEMPLATES: Dict[str, List[str]] = {
+    "LOOP":      ["for (const item of items) {", "for (let i = 0; i < n; i++) {", "while (cond) {"],
+    "BRANCH":    ["if (cond) {", "if (x > y) {", "if (x < y) {", "if (x === y) {"],
+    "ARITH_ADD": ["result = a + b", "x = x + 1"],
+    "ARITH_SUB": ["result = a - b", "x = x - 1"],
+    "ARITH_MUL": ["result = a * b", "total *= item"],
+    "ARITH_DIV": ["result = a / b", "avg = total / n"],
+    "ARITH_MOD": ["if (x % 2 === 0) {", "rem = x % 2"],
+    "COMPARE_EQ":["if (x === y) {", "if (a === b) {"],
+    "COMPARE_GT":["if (x > y) {", "if (a > b) {"],
+    "COMPARE_LT":["if (x < y) {", "if (a < b) {"],
+    "ASSIGN":    ["let total = 0", "let result = 0", "let acc = 0"],
+    "RETURN":    ["return total;", "return result;", "return x;"],
+    "READ":      ["const data = fs.readFileSync('f', 'utf8')", "const data = read()", "const data = input()"],
+    "WRITE":     ["console.log(result)", "return result;"],
+    "AGGREGATE": ["total += item", "acc = acc + item", "count += 1"],
+    "FILTER":    ["result = items.filter(pred)", "if (x % 2 === 0) {", "if (x > 0) {"],
+    "SORT":      ["return items.sort();", "items.sort();"],
+    "SEARCH":    ["result = items.findIndex((x) => x === target)", "if (items.includes(x)) {"],
+    "STATE":     ["total += item", "count += 1", "result = result + x"],
+}
+
+
+def _lang_kind(language: str) -> str:
+    """Return the block-delimiter style: 'colon' (python/ruby) or 'brace' (js/c/...)."""
+    return "colon" if language in ("python", "ruby", "go") else "brace"
 
 
 def parse_shape(shape_str: str) -> List[str]:
@@ -48,38 +78,59 @@ def parse_shape(shape_str: str) -> List[str]:
 
 
 def synthesize(shape_str: str, language: str = "python") -> Optional[str]:
-    """Synthesize a function from a target shape string.
+    """Synthesize a function from a target shape string in a given language.
 
-    Returns Python code, or None if a primitive has no template.
+    Supports python (default) and js; the `language` arg is now honored (it was
+    previously ignored, always emitting Python). Returns code, or None if a
+    primitive has no template for the requested language.
     """
     prims = parse_shape(shape_str)
     if not prims:
         return None
+    tpls_for = JS_TEMPLATES if language == "js" else TEMPLATES
+    kind = _lang_kind(language)
 
-    # Function signature
-    sig = "def fn(items):"
+    # Function signature + block close per language.
+    if language == "js":
+        sig = "function fn(items) {"
+        close = "}"
+        block_ender = "}"
+    else:
+        sig = "def fn(items):"
+        close = ""
+        block_ender = None
     body: List[str] = []
 
     # ASSIGN first (initialize accumulator) at function level.
     if "ASSIGN" in prims:
-        body.append("    " + TEMPLATES["ASSIGN"][0])
+        body.append("    " + tpls_for["ASSIGN"][0])
 
-    # Build body, tracking block nesting depth for correct indentation.
+    # Build body, tracking block nesting depth for correct indentation/close.
     depth = 1  # inside function
     for p in prims:
-        if p in ("READ", "ASSIGN"):
+        if p == "ASSIGN":
             continue
-        tpls = TEMPLATES.get(p)
+        tpls = tpls_for.get(p)
         if not tpls:
             return None
         frag = tpls[0]
         indent = "    " * depth
-        if frag.endswith(":") and (frag.startswith("for") or frag.startswith("while") or frag.startswith("if")):
+        # block open: python/ruby use ':'-terminated keywords; js/brace use '{'
+        is_block_open = frag.endswith(":") and (
+            frag.startswith("for") or frag.startswith("while") or frag.startswith("if")
+        ) if kind == "colon" else frag.rstrip().endswith("{")
+        if is_block_open:
             body.append(indent + frag)
             depth += 1
         else:
             body.append(indent + frag)
 
+    if language == "js":
+        # close inner blocks (deepest->shallowest) then the function itself
+        for d in range(depth - 1, -1, -1):
+            body.append("    " * d + close)
+        result = sig + "\n" + "\n".join(body)
+        return result
     return sig + "\n" + "\n".join(body)
 
 

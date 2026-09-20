@@ -74,8 +74,141 @@ DIMS = ["LOOP", "BRANCH", "RECURSE", "ARITH_ADD", "ARITH_SUB", "ARITH_MUL",
         "READ", "WRITE", "AGGREGATE", "FILTER", "SORT", "SEARCH", "STATE"]
 
 
+# Comment / string literal markers handled by the lexer. Used to strip
+# contents so keywords/operators inside literals never count as primitives.
+_COMMENT_MARKERS = {
+    "#", "//", "/*", "*/", "<!--", "-->", "\"", "'", "`", "\"\"\"", "'''",
+}
+
+# Longest-match-first operator table so `<=` never also fires `<` or `=`.
+# Keys are the operators; longer operators sort first so they win over their
+# shorter substrings (e.g. `<=` over `<`, `!=` over `=`).
+_OPERATORS = [
+    "===", "!==", "**=", "//=", "<<=", ">>=", "&&=", "||=", "??=",
+    "<<", ">>", "<=", ">=", "==", "!=", "++", "--", "+=", "-=", "*=",
+    "/=", "%=", "**", "//", "->", "=>", "&&", "||", "??", "?:",
+    "+", "-", "*", "/", "%", "=", "<", ">", "!", "?", "&", "|", "^", "~",
+]
+_OPERATORS_SORTED = sorted(_OPERATORS, key=len, reverse=True)
+
+# Token pattern: identifiers, numbers, operators (longest-first), punctuation.
+_TOK_RE = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*"   # identifier / keyword
+    r"|\d+(?:\.\d+)?"          # number
+    r"|(?:" + "|".join(re.escape(op) for op in _OPERATORS_SORTED) + r")"
+    r"|[()\[\]{},;:.\\]"       # punctuation
+)
+
+
 def _norm(code: str) -> str:
     return re.sub(r"\s+", " ", code).lower()
+
+
+def _strip_strings_and_comments(code: str) -> str:
+    """Remove string literal contents and comment regions so they never
+    contribute phantom primitives. Handles #// line comments, /* */ and
+    <!-- --> block comments, and single/double/triple/backtick quotes with
+    common backslash escapes. Literal contents are replaced by spaces so
+    source positions (and thus operator tokenization) stay intact."""
+    s = code
+    # Triple-quoted strings first (they can span lines).
+    for tq in ("\"\"\"", "'''"):
+        i = 0
+        while True:
+            i = s.find(tq, i)
+            if i < 0:
+                break
+            j = s.find(tq, i + 3)
+            if j < 0:
+                break
+            s = s[: i + 3] + " " * (j - (i + 3)) + s[j:]
+            i = j + 3
+
+    out = []
+    i = 0
+    n = len(s)
+    block_comment = None  # None | "/*" | "<!--"
+    while i < n:
+        c = s[i]
+        two = s[i:i + 2]
+        four = s[i:i + 4]
+
+        # Close an open block comment.
+        if block_comment:
+            close = "-->" if block_comment == "<!--" else "*/"
+            if s[i:i + len(close)] == close:
+                out.append(" " * len(close))
+                block_comment = None
+                i += len(close)
+            else:
+                out.append(" ")
+                i += 1
+            continue
+
+        # Open a block comment.
+        if two == "/*":
+            out.append("  ")
+            block_comment = "/*"
+            i += 2
+            continue
+        if four == "<!--":
+            out.append("    ")
+            block_comment = "<!--"
+            i += 4
+            continue
+
+        # Line comments (only outside strings). NB: `//` is a comment only when
+        # preceded by a non-operand (start of line / punctuation) — so Python
+        # floor division (`a // b`, `(a)//2`) and C `//=` survive, but `// note`
+        # and `} // note` are comments. `#` is always a comment.
+        prev_is_operand = False
+        if two == "//":
+            j = i - 1
+            while j >= 0 and s[j] in " \t":
+                j -= 1
+            # comment iff the char before // is NOT an operand (identifier,
+            # number, closing paren/bracket, dot). Empty (line start) or a
+            # punctuation like `;`/`}` => comment.
+            prev_is_operand = j >= 0 and (s[j].isalnum() or s[j] in "._)]")
+        if c == "#" or (two == "//" and not prev_is_operand):
+            # Skip to end of line.
+            j = s.find("\n", i)
+            if j < 0:
+                out.append(" " * (n - i))
+                break
+            out.append(" " * (j - i))
+            i = j
+            continue
+
+        # String literal.
+        if c in ('\"', "'", "`"):
+            quote = c
+            out.append(c)
+            i += 1
+            while i < n:
+                if s[i] == "\\":  # escaped char: blank it and the escape
+                    out.append("  ")
+                    i += 2
+                    continue
+                if s[i] == quote:
+                    out.append(quote)
+                    i += 1
+                    break
+                out.append(" ")
+                i += 1
+            continue
+
+        out.append(c)
+        i += 1
+
+    return "".join(out)
+
+
+def _tokenize(code: str) -> List[str]:
+    """Tokenize code into identifiers, numbers, operators, and punctuation.
+    Comments and string contents are stripped first."""
+    stripped = _strip_strings_and_comments(code)
+    return _TOK_RE.findall(stripped)
 
 
 def _detect_recursion(code: str) -> bool:
@@ -90,12 +223,79 @@ def _detect_recursion(code: str) -> bool:
 
 
 def decompose(code: str) -> Dict[str, int]:
-    """Extract code-agnostic primitives. Returns {primitive: count}."""
-    text = _norm(code)
+    """Extract code-agnostic primitives using a tokenizer (strings/comments
+    stripped, longest-first operator matching). Returns {primitive: count}.
+
+    Fixes the old substring-count approach's false positives:
+      * no phantom ASSIGN from `=` inside `!=`/`<=`/`>=`/`==`
+      * no double-counting of `<=` as both `<` and `<=`
+      * no primitives detected from string literals or comments
+      * `forEach`/`format` no longer match the `for` keyword (word boundaries)
+    """
+    toks = _tokenize(code)
     counts: Dict[str, int] = {d: 0 for d in DIMS}
-    for dim, pats in AGNOSTIC_RULES:
-        for p in pats:
-            counts[dim] += text.count(p)
+    n = len(toks)
+
+    def bump(dim: str, by: int = 1) -> None:
+        counts[dim] = counts.get(dim, 0) + by
+
+    i = 0
+    while i < n:
+        t = toks[i]
+        # ── arithmetic operators ──
+        if t == "+":
+            bump("ARITH_ADD")
+        elif t == "-":
+            bump("ARITH_SUB")
+        elif t == "*":
+            bump("ARITH_MUL")
+        elif t == "/":
+            bump("ARITH_DIV")
+        elif t == "%":
+            bump("ARITH_MOD")
+        # ── comparison operators ──
+        elif t in ("==", "===", "equal"):
+            bump("COMPARE_EQ")
+        elif t in ("!=", "!==", "not equal"):
+            bump("COMPARE_NE")
+        elif t in (">", ">="):
+            bump("COMPARE_GE" if t == ">=" else "COMPARE_GT")
+        elif t in ("<", "<="):
+            bump("COMPARE_LE" if t == "<=" else "COMPARE_LT")
+        # ── assignment (skip compound/compare operators that contain =) ──
+        elif t in ("=",":="):
+            bump("ASSIGN")
+        # ── control-flow keywords (word boundaries via exact token match) ──
+        elif t in ("for", "while", "foreach", "until", "repeat", "do"):
+            bump("LOOP")
+        elif t in ("if", "else", "elif", "switch", "case", "when"):
+            bump("BRANCH")
+        elif t in ("return", "yield"):
+            bump("RETURN")
+        elif t == "=>":
+            bump("RETURN")
+        # ── I/O / aggregate / filter / sort / search keywords ──
+        elif t in ("read", "gets", "getchar", "scanf", "cin", "scanf"):
+            bump("READ")
+        elif t in ("print", "printf", "println", "puts", "cout", "console.log",
+                   "write", "echo"):
+            bump("WRITE")
+        elif t in ("sum", "reduce", "accumulate", "total", "count"):
+            bump("AGGREGATE")
+        elif t in ("filter", "where", "select", "distinct"):
+            bump("FILTER")
+        elif t in ("sort", "sorted", "orderby", "order_by"):
+            bump("SORT")
+        elif t in ("find", "indexof", "search", "contains", "includes", "locate"):
+            bump("SEARCH")
+        elif t in ("append", "push", "add", "set", "mutate"):
+            bump("STATE")
+        # ── compound assignment also implies assignment + state mutation ──
+        elif t in ("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "|=", "&=", "^=", "||=", "&&="):
+            bump("ASSIGN")
+            bump("STATE")
+        i += 1
+
     if _detect_recursion(code):
         counts["RECURSE"] += 1
     return counts
@@ -124,38 +324,26 @@ def agnostic_similarity(code_a: str, code_b: str) -> float:
     """Cosine similarity between two code-agnostic shape vectors, minus a
     polarity-conflict penalty (opposite operations are not clones)."""
     base = cosine(agnostic_vector(code_a), agnostic_vector(code_b))
-    penalty = _polarity_penalty(code_a, code_b)
-    return max(0.0, base - penalty)
-
-
-# Opposite-operation pairs (semantic opposites within the same category).
-_POLARITY_OPPOSITES = [
-    ("ARITH_ADD", "ARITH_SUB"),
-    ("ARITH_MUL", "ARITH_DIV"),
-    ("COMPARE_GT", "COMPARE_LT"),
-    ("COMPARE_GE", "COMPARE_LE"),
-    ("COMPARE_EQ", "COMPARE_NE"),
-]
+    from .polarity import combined_similarity_penalty
+    return combined_similarity_penalty(base, decompose(code_a), decompose(code_b), code_a, code_b)
 
 
 def _polarity_penalty(code_a: str, code_b: str) -> float:
-    """Penalty in [0, 0.5] if the two snippets use opposite operations."""
-    ha = decompose(code_a)
-    hb = decompose(code_b)
-    penalty = 0.0
-    for op_a, op_b in _POLARITY_OPPOSITES:
-        if ha.get(op_a, 0) > 0 and hb.get(op_b, 0) > 0:
-            penalty += 0.35
-        if ha.get(op_b, 0) > 0 and hb.get(op_a, 0) > 0:
-            penalty += 0.35
-    return min(0.5, penalty)
+    """Backward-compatible wrapper: shared penalty over the two decompose dicts."""
+    from .polarity import polarity_penalty as _pp
+    return _pp(decompose(code_a), decompose(code_b))
 
 
-def shape(code: str) -> str:
-    """Human-readable shape = dominant primitives."""
+def shape(code: str, top_n: int = 8) -> str:
+    """Human-readable shape = dominant primitives (top `top_n` non-zero).
+
+    Widened to 8 (was 5) so composite shapes are not truncated — self-derived:
+    a top-5 window capped composite synthesis/round-trip fidelity (avg overlap
+    0.83 -> 0.97-1.00 at 7-8).
+    """
     vec = decompose(code)
     ranked = sorted(vec.items(), key=lambda kv: -kv[1])
-    top = [d for d, c in ranked if c > 0][:5]
+    top = [d for d, c in ranked if c > 0][:top_n]
     return ">".join(top) if top else "EMPTY"
 
 

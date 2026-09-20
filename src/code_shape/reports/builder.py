@@ -113,7 +113,6 @@ def collect_analysis(
     from code_shape.analysis.algorithm_detector import detect_algorithm
     from code_shape.analysis.pattern_detector import detect_patterns
     from code_shape.security.precise_issues import find_precise_issues, find_buffer_overflows
-    from code_shape.security.vuln_v2 import detect_vulns_v2
     from code_shape.security.semantic_sinks import detect_sinks
 
     now = _now()
@@ -162,7 +161,6 @@ def collect_analysis(
             rep.vulnerabilities = (
                 find_precise_issues(code, file_path=target_file, lang=lang)
                 + find_buffer_overflows(code, file_path=target_file, lang=lang)
-                + detect_vulns_v2(code, lang or "python")
             )
         except Exception:
             rep.vulnerabilities = []

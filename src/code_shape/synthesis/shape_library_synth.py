@@ -60,8 +60,17 @@ ALGORITHM_TEMPLATES = {
 }
 
 
+def _norm_lang(lang: str) -> str:
+    """Normalize language aliases so 'js' and 'javascript' (and 'py'/'python')
+    agree across synthesis paths. Self-derived: code_synthesizer uses 'js'
+    while shape_library_synth uses 'javascript', causing inconsistent output.
+    """
+    return {"js": "javascript", "py": "python", "javascript": "javascript"}.get(lang, lang)
+
+
 def synthesize_algorithm(algorithm: str, lang: str = "python", name: str = "fn") -> Optional[str]:
     """Synthesize an algorithm from its detected name."""
+    lang = _norm_lang(lang)
     tpl = ALGORITHM_TEMPLATES.get(algorithm, {}).get(lang)
     if not tpl:
         return None
@@ -150,6 +159,7 @@ LIBRARY_TEMPLATES = {
     },
     "send_email": {
         "python": ("smtplib", "sendmail", "from_addr, to_addr, msg", "NETWORK"),
+        "javascript": ("transporter", "sendMail", "'{{ from: a@example.com, to: to, subject: hi, text: msg }}'", "NETWORK"),
     },
     "parse_json": {
         "python": ("json", "loads", "data", "SAFE"),
@@ -212,6 +222,7 @@ def _result_for(intent: str) -> str:
 
 def synthesize(intent: str, shape: str, lang: str = "python", name: str = "fn") -> Optional[str]:
     """Synthesize a function from an intent + shape + language."""
+    lang = _norm_lang(lang)
     lib = LIBRARY_TEMPLATES.get(intent, {}).get(lang)
     if not lib:
         return None
@@ -251,6 +262,7 @@ def synthesize_any(intent: str, shape: str, lang: str = "python", name: str = "f
     If the intent matches a known algorithm (binary_search, merge_sort, etc.),
     use the algorithm template. Otherwise use the library+shape templates.
     """
+    lang = _norm_lang(lang)
     # try algorithm template first
     alg = synthesize_algorithm(intent, lang, name)
     if alg:
