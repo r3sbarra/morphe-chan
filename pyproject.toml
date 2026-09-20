@@ -30,6 +30,12 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
 ]
+mcp = [
+    # The MCP server (src/morphe_chan_mcp) uses the legacy Server decorator API
+    # (@server.list_tools / @server.call_tool). Pin to a version that still
+    # provides server.list_tools; newer mcp removed it.
+    "mcp<1.30",
+]
 
 [project.entry-points."basic_chan.sisters"]
 morphe-chan = "code_shape.chan:morphe_chan"
